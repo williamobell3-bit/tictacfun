@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Name Game - Multiplayer</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // API base URL - defaults to same server
+        const API_BASE = window.location.origin;
+        
+        // Lucide React icons as inline SVG components
+        const Users = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+        );
+        
+        const Copy = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+        );
+        
+        const Check = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+        );
+        
+        const Crown = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+            </svg>
+        );
+        
+        const AlertCircle = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        );
+
+        function UsernameMatchGame() {
+          const [state, setState] = useState('home');
+          const [joinStep, setJoinStep] = useState(1);
+          const [hostStep, setHostStep] = useState(1);
+          const [gameCode, setGameCode] = useState('');
+          const [playerName, setPlayerName] = useState('');
+          const [username, setUsername] = useState('');
+          const [gameMode, setGameMode] = useState('classic');
+          const [theme, setTheme] = useState('');
+          const [gameData, setGameData] = useState(null);
+          const [myId, setMyId] = useState(null);
+          const [message, setMessage] = useState('');
+          const [selected, setSelected] = useState('');
+          const [guess, setGuess] = useState('');
+          const [copied, setCopied] = useState(false);
+
+          // Poll for game updates
+          useEffect(() => {
+            if (!gameCode) return;
+            
+            const pollGame = async () => {
+              try {
+                const response = await fetch(`${API_BASE}/api/game/${gameCode}`);
+                if (response.ok) {
+                  const data = await response.json();
+                  setGameData(data);
+                }
+              } catch (error) {
+                console.error('Error polling game:', error);
+              }
+            };
+            
+            // Poll every second
+            const interval = setInterval(pollGame, 1000);
+            pollGame(); // Initial poll
+            
+            return () => clearInterval(interval);
+          }, [gameCode]);
+
+          const createGame = async () => {
+            const trimmedName = playerName.trim();
+            const trimmedUsername = username.trim();
+            
+            if (!trimmedName || !trimmedUsername) {
+              setMessage('Enter name and username');
+              return;
+            }
+            
+            if (trimmedName.length < 2 || trimmedUsername.length < 2) {
+              setMessage('Name and username must be at least 2 characters');
+              return;
+            }
+            
+            const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+            const id = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 5);
+            const data = {
+              code: code,
+              mode: gameMode,
+              theme: theme,
+              state: 'lobby',
+              players: [{
+                id: id,
+                name: trimmedName,
+                username: trimmedUsername,
+                isHost: true,
+                active: true,
+                score: 0
+              }],
+              current: null,
+              winner: null
+            };
+            
+            try {
+              const response = await fetch(`${API_BASE}/api/game`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+              });
+              
+              if (response.ok) {
+                setGameCode(code);
+                setMyId(id);
+                setGameData(data);
+                setState('lobby');
+                setHostStep(1);
+                setMessage('');
+              } else {
+                setMessage('Failed to create game');
+              }
+            } catch (error) {
+              setMessage('Connection error. Is the server running?');
+            }
+          };
+
+          const verifyGameCode = async () => {
+            const trimmedCode = gameCode.trim().toUpperCase();
+            
+            if (!trimmedCode) {
+              setMessage('Enter code');
+              return;
+            }
+            
+            try {
+              const response = await fetch(`${API_BASE}/api/game/${trimmedCode}`);
+              
+              if (response.ok) {
+                const data = await response.json();
+                
+                if (data.state !== 'lobby') {
+                  setMessage('Game already started');
+                  return;
+                }
+                
+                setGameCode(trimmedCode);
+                setMessage('');
+                setJoinStep(2);
+              } else {
+                setMessage('Game not found');
+              }
+            } catch (error) {
+              setMessage('Connection error. Is the server running?');
+            }
+          };
+
+          const joinGame = async () => {
+            const trimmedCode = gameCode.trim().toUpperCase();
+            const trimmedName = playerName.trim();
+            const trimmedUsername = username.trim();
+            
+            if (!trimmedName || !trimmedUsername) {
+              setMessage('Enter name and username');
+              return;
+            }
+            
+            if (trimmedName.length < 2 || trimmedUsername.length < 2) {
+              setMessage('Name and username must be at least 2 characters');
+              return;
+            }
+            
+            try {
+              const response = await fetch(`${API_BASE}/api/game/${trimmedCode}`);
+              
+              if (!response.ok) {
+                setMessage('Game not found');
+                return;
+              }
+              
+              const data = await response.json();
+              
+              const nameLower = trimmedName.toLowerCase();
+              const usernameLower = trimmedUsername.toLowerCase();
+              const duplicateName = data.players.some(p => p.name.toLowerCase() === nameLower);
+              const duplicateUsername = data.players.some(p => p.username.toLowerCase() === usernameLower);
+              
+              if (duplicateName) {
+                setMessage('This name is already taken. Choose a different name.');
+                return;
+              }
+              
+              if (duplicateUsername) {
+                setMessage('This username is already taken. Choose a different username.');
+                return;
+              }
+              
+              const id = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 5);
+              data.players.push({
+                id: id,
+                name: trimmedName,
+                username: trimmedUsername,
+                isHost: false,
+                active: true,
+                score: 0
+              });
+              
+              const updateResponse = await fetch(`${API_BASE}/api/game`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+              });
+              
+              if (updateResponse.ok) {
+                setMyId(id);
+                setGameData(data);
+                setState('lobby');
+                setJoinStep(1);
+                setMessage('');
+              } else {
+                setMessage('Failed to join game');
+              }
+            } catch (error) {
+              setMessage('Connection error. Is the server running?');
+            }
+          };
+
+          const updateGame = async (updates) => {
+            const newData = { ...gameData, ...updates };
+            
+            try {
+              await fetch(`${API_BASE}/api/game`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newData)
+              });
+              
+              setGameData(newData);
+            } catch (error) {
+              console.error('Error updating game:', error);
+            }
+          };
+
+          const startGame = () => {
+            if (gameData.players.length < 2) {
+              setMessage('Need at least 2 players to start');
+              return;
+            }
+            
+            const active = gameData.players.filter(p => p.active);
+            const randomIndex = Math.floor(Math.random() * active.length);
+            updateGame({ state: 'playing', current: active[randomIndex].id });
+          };
+
+          const makeGuess = () => {
+            const trimmedGuess = guess.trim();
+            
+            if (!selected || !trimmedGuess) {
+              setMessage('Select a player and enter a guess');
+              return;
+            }
+            
+            const target = gameData.players.find(p => p.id === selected);
+            const correct = trimmedGuess.toLowerCase() === target.name.toLowerCase();
+            
+            if (correct) {
+              const players = gameData.players.map(p => {
+                if (p.id === selected) return { ...p, active: false };
+                if (p.id === gameData.current) return { ...p, score: p.score + 1 };
+                return p;
+              });
+              const remaining = players.filter(p => p.active);
+              
+              if (remaining.length === 1) {
+                updateGame({ players: players, state: 'finished', winner: remaining[0] });
+              } else {
+                updateGame({ players: players });
+              }
+            } else {
+              updateGame({ current: selected });
+            }
+            
+            setSelected('');
+            setGuess('');
+            setMessage('');
+          };
+
+          const copyCode = () => {
+            navigator.clipboard.writeText(gameCode);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          };
+
+          const leaveGame = () => {
+            setState('home');
+            setGameData(null);
+            setGameCode('');
+            setMyId(null);
+            setMessage('');
+            setJoinStep(1);
+            setHostStep(1);
+          };
+
+          const isMyTurn = gameData && gameData.current === myId;
+          const active = gameData ? gameData.players.filter(p => p.active) : [];
+          const amIActive = gameData && gameData.players.find(p => p.id === myId)?.active;
+
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-green-500 via-blue-500 to-purple-600 p-6">
+              <style>{`
+                @keyframes fadeIn {
+                  from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                  }
+                  to {
+                    opacity: 1;
+                    transform: translateY(0);
+                  }
+                }
+                .fade-in {
+                  animation: fadeIn 0.5s ease-out forwards;
+                }
+                .fade-in-delay-1 {
+                  animation: fadeIn 0.5s ease-out 0.1s forwards;
+                  opacity: 0;
+                }
+                .fade-in-delay-2 {
+                  animation: fadeIn 0.5s ease-out 0.2s forwards;
+                  opacity: 0;
+                }
+                .fade-in-delay-3 {
+                  animation: fadeIn 0.5s ease-out 0.3s forwards;
+                  opacity: 0;
+                }
+              `}</style>
+              <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-8 fade-in">
+                <div className="text-center mb-8 fade-in-delay-1">
+                  <h1 className="text-5xl font-bold bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">The Name Game</h1>
+                  <p className="text-gray-600 mt-2">Guess the real names behind the usernames!</p>
+                </div>
+
+                {state === 'home' && (
+                  <div className="grid md:grid-cols-2 gap-6 fade-in-delay-2">
+                    <button onClick={() => setState('host')} className="p-8 bg-gradient-to-br from-green-500 to-green-700 text-white rounded-2xl hover:opacity-90 transition transform hover:scale-105 shadow-xl">
+                      <Users className="w-16 h-16 mx-auto mb-4" />
+                      <h2 className="text-3xl font-bold">Host Game</h2>
+                    </button>
+                    <button onClick={() => setState('join')} className="p-8 bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-2xl hover:opacity-90 transition transform hover:scale-105 shadow-xl">
+                      <Copy className="w-16 h-16 mx-auto mb-4" />
+                      <h2 className="text-3xl font-bold">Join Game</h2>
+                    </button>
+                  </div>
+                )}
+
+                {state === 'host' && hostStep === 1 && (
+                  <div className="space-y-4 fade-in-delay-2">
+                    <button onClick={() => setState('home')} className="text-blue-600 hover:underline">← Back</button>
+                    <div className="text-center mb-4">
+                      <h2 className="text-2xl font-bold text-gray-800">Host a Game</h2>
+                      <p className="text-gray-600 mt-1">Step 1: Choose game settings</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Game Mode</label>
+                      <select value={gameMode} onChange={(e) => setGameMode(e.target.value)} className="w-full p-3 border-2 rounded-lg">
+                        <option value="classic">Classic</option>
+                        <option value="speed">Speed Round</option>
+                        <option value="team">Team Mode</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Theme (Optional)</label>
+                      <input 
+                        placeholder="e.g., Movies, Animals, Food..." 
+                        value={theme} 
+                        onChange={(e) => setTheme(e.target.value)} 
+                        onKeyPress={(e) => e.key === 'Enter' && setHostStep(2)}
+                        className="w-full p-3 border-2 rounded-lg" 
+                      />
+                    </div>
+                    <button onClick={() => setHostStep(2)} className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white p-4 rounded-lg font-bold">Next</button>
+                  </div>
+                )}
+
+                {state === 'host' && hostStep === 2 && (
+                  <div className="space-y-4 fade-in-delay-2">
+                    <button onClick={() => { setHostStep(1); setMessage(''); }} className="text-blue-600 hover:underline">← Back</button>
+                    <div className="text-center mb-4">
+                      <h2 className="text-2xl font-bold text-gray-800">Host a Game</h2>
+                      <p className="text-gray-600 mt-1">Step 2: Enter your names</p>
+                      <div className="mt-2 text-sm text-gray-600">
+                        <p><span className="font-semibold text-blue-700">Mode:</span> {gameMode.charAt(0).toUpperCase() + gameMode.slice(1)}</p>
+                        {theme && <p><span className="font-semibold text-blue-700">Theme:</span> {theme}</p>}
+                      </div>
+                    </div>
+                    <input placeholder="Your real name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full p-3 border-2 rounded-lg" />
+                    <input 
+                      placeholder="Your username" 
+                      value={username} 
+                      onChange={(e) => setUsername(e.target.value)} 
+                      onKeyPress={(e) => e.key === 'Enter' && createGame()}
+                      className="w-full p-3 border-2 rounded-lg" 
+                    />
+                    <button onClick={createGame} className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white p-4 rounded-lg font-bold">Create Game</button>
+                    {message && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center gap-2 fade-in"><AlertCircle className="w-5 h-5" />{message}</div>}
+                  </div>
+                )}
+
+                {state === 'join' && joinStep === 1 && (
+                  <div className="space-y-4 fade-in-delay-2">
+                    <button onClick={() => setState('home')} className="text-blue-600 hover:underline">← Back</button>
+                    <div className="text-center mb-4">
+                      <h2 className="text-2xl font-bold text-gray-800">Join a Game</h2>
+                      <p className="text-gray-600 mt-1">Step 1: Enter the game code</p>
+                    </div>
+                    <input 
+                      placeholder="Game Code" 
+                      value={gameCode} 
+                      onChange={(e) => setGameCode(e.target.value.toUpperCase())} 
+                      onKeyPress={(e) => e.key === 'Enter' && verifyGameCode()}
+                      className="w-full p-3 border-2 rounded-lg text-center text-2xl font-bold" 
+                      maxLength={4} 
+                    />
+                    <button onClick={verifyGameCode} className="w-full bg-gradient-to-r from-purple-500 to-purple-700 text-white p-4 rounded-lg font-bold">Next</button>
+                    {message && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center gap-2 fade-in"><AlertCircle className="w-5 h-5" />{message}</div>}
+                  </div>
+                )}
+
+                {state === 'join' && joinStep === 2 && (
+                  <div className="space-y-4 fade-in-delay-2">
+                    <button onClick={() => { setJoinStep(1); setMessage(''); }} className="text-blue-600 hover:underline">← Back</button>
+                    <div className="text-center mb-4">
+                      <h2 className="text-2xl font-bold text-gray-800">Join a Game</h2>
+                      <p className="text-gray-600 mt-1">Step 2: Enter your names</p>
+                      <p className="text-sm text-purple-700 font-semibold mt-2">Game Code: {gameCode}</p>
+                    </div>
+                    <input placeholder="Your real name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full p-3 border-2 rounded-lg" />
+                    <input 
+                      placeholder="Your username" 
+                      value={username} 
+                      onChange={(e) => setUsername(e.target.value)} 
+                      onKeyPress={(e) => e.key === 'Enter' && joinGame()}
+                      className="w-full p-3 border-2 rounded-lg" 
+                    />
+                    <button onClick={joinGame} className="w-full bg-gradient-to-r from-purple-500 to-purple-700 text-white p-4 rounded-lg font-bold">Join Game</button>
+                    {message && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center gap-2 fade-in"><AlertCircle className="w-5 h-5" />{message}</div>}
+                  </div>
+                )}
+
+                {state === 'lobby' && gameData && (
+                  <div className="space-y-6 fade-in-delay-2">
+                    <div className="bg-gradient-to-r from-green-100 to-purple-100 p-6 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm text-gray-600">Game Code</p>
+                          <p className="text-3xl font-bold text-blue-700">{gameCode}</p>
+                        </div>
+                        <button onClick={copyCode} className="px-4 py-2 bg-white rounded-lg hover:bg-gray-100">
+                          {copied ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-bold mb-2">Players ({gameData.players.length})</h3>
+                      {gameData.players.map((p, index) => (
+                        <div key={p.id} className={`bg-gray-100 p-3 rounded mb-2 fade-in-delay-${Math.min(index + 1, 3)}`}>
+                          <p className="font-semibold">{p.name} {p.id === myId && '(You)'}</p>
+                          {p.isHost && <p className="text-sm text-gray-600">👑 Host</p>}
+                        </div>
+                      ))}
+                    </div>
+                    {message && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center gap-2 fade-in"><AlertCircle className="w-5 h-5" />{message}</div>}
+                    {gameData.players[0].id === myId && (
+                      <button onClick={startGame} className="w-full bg-gradient-to-r from-green-500 to-green-700 text-white p-4 rounded-lg font-bold">Start Game</button>
+                    )}
+                    <button onClick={leaveGame} className="w-full bg-gray-300 text-gray-700 p-3 rounded-lg font-bold hover:bg-gray-400">Leave Game</button>
+                  </div>
+                )}
+
+                {gameData && gameData.state === 'playing' && (
+                  <div className="space-y-6 fade-in-delay-2">
+                    <div className="bg-gradient-to-r from-blue-100 to-purple-100 p-4 rounded-lg">
+                      <p className="text-sm">Current Turn</p>
+                      <p className="text-2xl font-bold">
+                        {gameData.players.find(p => p.id === gameData.current)?.username || 'Unknown'}
+                        {isMyTurn && ' (You!)'}
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h3 className="font-bold mb-2">Active Players ({active.length})</h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        {active.map((p, index) => (
+                          <div key={p.id} className={
+                            p.id === gameData.current 
+                              ? `p-3 rounded bg-purple-100 border-2 border-purple-500 fade-in-delay-${Math.min(index % 3 + 1, 3)}`
+                              : `p-3 rounded bg-gray-100 fade-in-delay-${Math.min(index % 3 + 1, 3)}`
+                          }>
+                            <p className="font-semibold">{p.username}</p>
+                            <p className="text-xs text-gray-600">Score: {p.score}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {!amIActive && (
+                      <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded fade-in">
+                        <p className="font-semibold">You've been eliminated!</p>
+                        <p className="text-sm">Watch the remaining players battle it out.</p>
+                      </div>
+                    )}
+
+                    {isMyTurn && amIActive && (
+                      <div className="space-y-3 bg-green-50 p-4 rounded-lg border-2 border-green-500 fade-in">
+                        <p className="font-bold text-green-700">Your turn! Make a guess:</p>
+                        <select value={selected} onChange={(e) => setSelected(e.target.value)} className="w-full p-3 border-2 rounded-lg">
+                          <option value="">Select a player...</option>
+                          {active.filter(p => p.id !== myId).map(p => (
+                            <option key={p.id} value={p.id}>{p.username}</option>
+                          ))}
+                        </select>
+                        <input 
+                          placeholder="Guess their real name" 
+                          value={guess} 
+                          onChange={(e) => setGuess(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && makeGuess()}
+                          className="w-full p-3 border-2 rounded-lg" 
+                        />
+                        <button onClick={makeGuess} className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white p-3 rounded-lg font-bold">Submit Guess</button>
+                        {message && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center gap-2 fade-in"><AlertCircle className="w-5 h-5" />{message}</div>}
+                      </div>
+                    )}
+
+                    <button onClick={leaveGame} className="w-full bg-gray-300 text-gray-700 p-3 rounded-lg font-bold hover:bg-gray-400">Leave Game</button>
+                  </div>
+                )}
+
+                {gameData && gameData.state === 'finished' && gameData.winner && (
+                  <div className="text-center space-y-6 fade-in-delay-2">
+                    <div className="bg-gradient-to-r from-yellow-100 to-orange-100 p-8 rounded-lg">
+                      <Crown className="w-20 h-20 mx-auto text-yellow-500 mb-4" />
+                      <h2 className="text-3xl font-bold">Winner!</h2>
+                      <p className="text-2xl text-purple-700">{gameData.winner.username}</p>
+                      <p className="text-gray-600">({gameData.winner.name})</p>
+                    </div>
+                    <div>
+                      <h3 className="font-bold mb-3">Final Scores</h3>
+                      {gameData.players
+                        .sort((a, b) => b.score - a.score)
+                        .map((p, index) => (
+                        <div key={p.id} className={`p-3 rounded mb-2 fade-in-delay-${Math.min(index % 3 + 1, 3)} ${index === 0 ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-gray-100'}`}>
+                          <p className="font-semibold">
+                            {index + 1}. {p.username} = {p.name}
+                            {p.id === myId && ' (You)'}
+                          </p>
+                          <p className="text-sm">Score: {p.score} correct guess{p.score !== 1 ? 'es' : ''}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <button onClick={leaveGame} className="bg-gradient-to-r from-purple-500 to-purple-700 text-white px-8 py-3 rounded-lg font-bold">Back to Home</button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        ReactDOM.render(<UsernameMatchGame />, document.getElementById('root'));
+    </script>
+</body>
+</html>
