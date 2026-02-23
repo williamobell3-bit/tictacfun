@@ -48,42 +48,66 @@
   <div id="root"></div>
 
   <script>
-  
   /* ══════════════════════════════════════════════════════
-     Supabase Storage — syncs data across all devices
+     localStorage Storage Shim — mirrors the window.storage API
   ══════════════════════════════════════════════════════ */
   const SUPABASE_URL = 'https://ctmtyzrezzijvjtxuvbd.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0bXR5enJlenppanZqdHh1dmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3OTIyMTksImV4cCI6MjA4NzM2ODIxOX0.OsZa7ERQrJowkdrFw5yeR6MqpOY_lgym9g9k416BOZ0';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0bXR5enJlenppanZqdHh1dmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3OTIyMTksImV4cCI6MjA4NzM2ODIxOX0.OsZa7ERQrJowkdrFw5yeR6MqpOY_lgym9g9k416BOZ0';
 
-  window.storage = {
-    async get(key, shared=false) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/game_data?key=eq.${encodeURIComponent(key)}&shared=eq.${shared}&select=value`, {
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+SUPABASE_KEY }
-      });
-      const data = await res.json();
-      if (!data.length) throw new Error('Key not found');
-      return { key, value: data[0].value, shared };
+const SUPABASE_URL = 'https://ctmtyzrezzijvjtxuvbd.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0bXR5enJlenppanZqdHh1dmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3OTIyMTksImV4cCI6MjA4NzM2ODIxOX0.OsZa7ERQrJowkdrFw5yeR6MqpOY_lgym9g9k416BOZ0';
+
+window.storage = {
+  async get(key, shared=false) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/game_data?key=eq.${encodeURIComponent(key)}&shared=eq.${shared}&select=value`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+SUPABASE_KEY }
+    });
+    const data = await res.json();
+    if (!data.length) throw new Error('Key not found');
+    return { key, value: data[0].value, shared };
+  },
+  async set(key, value, shared=false) {
+    const v = typeof value==='string' ? value : JSON.stringify(value);
+    await fetch(`${SUPABASE_URL}/rest/v1/game_data`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+SUPABASE_KEY,
+                 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ key, value: v, shared, updated_at: new Date() })
+    });
+    return { key, value: v, shared };
+  },
+  async delete(key, shared=false) {
+    await fetch(`${SUPABASE_URL}/rest/v1/game_data?key=eq.${encodeURIComponent(key)}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+SUPABASE_KEY }
+    });
+    return { key, deleted: true };
+  }
+};      const val = localStorage.getItem(this._key(key,shared));
+      if(val===null) throw new Error('Key not found: '+key);
+      return {key, value:val, shared};
     },
-    async set(key, value, shared=false) {
-      const v = typeof value==='string' ? value : JSON.stringify(value);
-      await fetch(`${SUPABASE_URL}/rest/v1/game_data`, {
-        method: 'POST',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+SUPABASE_KEY,
-                   'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
-        body: JSON.stringify({ key, value: v, shared, updated_at: new Date() })
-      });
-      return { key, value: v, shared };
+    async set(key, value, shared=false){
+      try{
+        const v = typeof value==='string' ? value : JSON.stringify(value);
+        localStorage.setItem(this._key(key,shared), v);
+        return {key, value:v, shared};
+      }catch(e){ console.error('Storage.set failed:',e); return null; }
     },
-    async delete(key, shared=false) {
-      await fetch(`${SUPABASE_URL}/rest/v1/game_data?key=eq.${encodeURIComponent(key)}`, {
-        method: 'DELETE',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+SUPABASE_KEY }
-      });
-      return { key, deleted: true };
+    async delete(key, shared=false){
+      localStorage.removeItem(this._key(key,shared));
+      return {key, deleted:true, shared};
+    },
+    async list(prefix='', shared=false){
+      const pfx = this._key(prefix, shared);
+      const raw = (shared ? 'ttfs_' : 'ttf_');
+      const keys = Object.keys(localStorage)
+        .filter(k=>k.startsWith(pfx))
+        .map(k=>k.slice(raw.length));
+      return {keys, prefix, shared};
     }
   };
   </script>
-
 
   <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useCallback } = React;
@@ -545,7 +569,36 @@ async function loadUserProfile(username){
 }
 async function saveUserProfile(username,data){
   const key=STOR_PREFIX+username.toLowerCase().replace(/\s+/g,"_");
-  try{await window.storage.set(key,JSON.stringify(data));return true;}catch{return false;}
+  try{await const SUPABASE_URL = 'https://YOUR-PROJECT.supabase.co';
+const SUPABASE_KEY = 'your-anon-key-here';
+
+window.storage = {
+  async get(key, shared=false) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/game_data?key=eq.${encodeURIComponent(key)}&shared=eq.${shared}&select=value`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+SUPABASE_KEY }
+    });
+    const data = await res.json();
+    if (!data.length) throw new Error('Key not found');
+    return { key, value: data[0].value, shared };
+  },
+  async set(key, value, shared=false) {
+    const v = typeof value==='string' ? value : JSON.stringify(value);
+    await fetch(`${SUPABASE_URL}/rest/v1/game_data`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+SUPABASE_KEY,
+                 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify({ key, value: v, shared, updated_at: new Date() })
+    });
+    return { key, value: v, shared };
+  },
+  async delete(key, shared=false) {
+    await fetch(`${SUPABASE_URL}/rest/v1/game_data?key=eq.${encodeURIComponent(key)}`, {
+      method: 'DELETE',
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+SUPABASE_KEY }
+    });
+    return { key, deleted: true };
+  }
+};.set(key,JSON.stringify(data));return true;}catch{return false;}
 }
 async function loadXtraData(username){
   const key=STOR_PREFIX+"xtra_"+username.toLowerCase().replace(/\s+/g,"_");
@@ -640,7 +693,7 @@ function DiffBadge({difficulty}){
   return<span style={{background:`${d.color}20`,border:`1px solid ${d.color}55`,borderRadius:10,padding:"4px 10px",color:d.color,fontSize:"0.73rem",fontWeight:700}}>{d.icon} {d.label}</span>;
 }
 
-function GameShell({title,icon,onBack,children,turn,winner,draw,onRematch,extraInfo,vsBot,botThinking,difficulty,names,markers,tournamentMode,onBackToTourney}){
+function GameShell({title,icon,onBack,children,turn,winner,draw,onRematch,extraInfo,vsBot,botThinking,difficulty,names,markers}){
   return(
     <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a0a0f,#0d0d1a,#0a0f1a)",padding:16,display:"flex",flexDirection:"column",alignItems:"center"}}>
       <div style={{width:"100%",maxWidth:640}}>
@@ -652,10 +705,7 @@ function GameShell({title,icon,onBack,children,turn,winner,draw,onRematch,extraI
         {extraInfo&&<div style={{color:"#454545",fontSize:"0.73rem",textAlign:"center",marginBottom:10,fontStyle:"italic"}}>{extraInfo}</div>}
         <StatusBar turn={turn} winner={winner} draw={draw} vsBot={vsBot} botThinking={botThinking} names={names} markers={markers}/>
         {children}
-        {(winner||draw)&&(tournamentMode
-  ?<Btn onClick={onBackToTourney} color="linear-gradient(135deg,#f97316,#ea580c)" style={{marginTop:16,width:"100%"}}>🏟️ Back to Tournament</Btn>
-  :<Btn onClick={onRematch} color="linear-gradient(135deg,#7c3aed,#4f46e5)" style={{marginTop:16,width:"100%"}}>🔄 Play Again</Btn>
-)}
+        {(winner||draw)&&<Btn onClick={onRematch} color="linear-gradient(135deg,#7c3aed,#4f46e5)" style={{marginTop:16,width:"100%"}}>🔄 Play Again</Btn>}
       </div>
     </div>
   );
@@ -1552,7 +1602,7 @@ function MarkersScreen({xtraData,onUpdateXtra,username}){
 }
 
 /* ══════════════════════════════════════════════════════════
-   XTRA FUN — TOURNAMENT SYSTEM  (v2 — self-join, marker pick, no rematch)
+   XTRA FUN — TOURNAMENT SYSTEM
 ══════════════════════════════════════════════════════════ */
 const GAME_MODES_INFO=[
   {id:"classic",label:"Classic",icon:"⬜"},{id:"archery",label:"Archery",icon:"🏹"},
@@ -1561,8 +1611,10 @@ const GAME_MODES_INFO=[
 ];
 
 function buildBracket(players){
+  // Single elimination bracket
   let n=1;while(n<players.length)n*=2;
   const seeded=[...players];while(seeded.length<n)seeded.push(null);
+  // Shuffle
   for(let i=seeded.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[seeded[i],seeded[j]]=[seeded[j],seeded[i]];}
   const rounds=[];let current=seeded;
   while(current.length>1){
@@ -1576,218 +1628,75 @@ function buildBracket(players){
 
 function buildRoundRobin(players){
   const matches=[];
-  for(let i=0;i<players.length;i++)for(let j=i+1;j<players.length;j++)
-    matches.push({p1:players[i],p2:players[j],winner:null,played:false});
+  for(let i=0;i<players.length;i++)for(let j=i+1;j<players.length;j++)matches.push({p1:players[i],p2:players[j],winner:null,played:false});
   return matches;
 }
 
-/* Pre-match picker shown right before a tournament game */
-function TournamentPreMatch({match,xtraData,onStart,onCancel}){
-  const[nick1,setNick1]=useState("");
-  const[nick2,setNick2]=useState("");
-  const[m1,setM1]=useState(null);
-  const[m2,setM2]=useState(null);
-  const[step,setStep]=useState(1);
-  const owned=xtraData?.markers||[1,2,3,4,5,6];
-
-  const MarkerGrid=({selected,onSelect,exclude})=>(
-    <div style={{display:"flex",flexWrap:"wrap",gap:6,maxHeight:180,overflowY:"auto",padding:"4px 0"}}>
-      {MARKERS.map(mk=>{
-        const r=RARITY[mk.rarity];const isOwned=owned.includes(mk.id);
-        return(
-          <button key={mk.id} onClick={()=>onSelect(mk.id===selected?null:mk.id)}
-            disabled={mk.id===exclude}
-            title={`${mk.name} · ${r.label}`}
-            style={{width:50,height:50,borderRadius:11,border:`2px solid ${selected===mk.id?r.color:"rgba(255,255,255,0.08)"}`,
-              background:selected===mk.id?r.bg:"rgba(255,255,255,0.03)",fontSize:"1.6rem",cursor:mk.id===exclude?"not-allowed":"pointer",
-              display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.14s",
-              transform:selected===mk.id?"scale(1.1)":"scale(1)",
-              boxShadow:selected===mk.id?`0 0 12px ${r.glow}`:"none",
-              opacity:mk.id===exclude?0.2:isOwned?1:0.35,fontFamily:"inherit"}}>
-            {mk.emoji}
-          </button>
-        );
-      })}
-    </div>
-  );
-
-  return(
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a0a0f,#0d0d1a)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-      <div className="slide-in" style={{width:"100%",maxWidth:460,background:"rgba(255,255,255,0.05)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:24,padding:"26px 22px",color:"#fff"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:18}}>
-          <Btn small onClick={onCancel}>← Back</Btn>
-          <div>
-            <h3 className="game-title" style={{margin:0,fontSize:"1.1rem"}}>⚔️ Match Setup</h3>
-            <div style={{color:"#555",fontSize:"0.72rem"}}>{match.p1} vs {match.p2}</div>
-          </div>
-        </div>
-
-        {/* progress */}
-        <div style={{display:"flex",gap:6,marginBottom:18}}>
-          {[1,2,3].map(s=><div key={s} style={{flex:1,height:4,borderRadius:4,background:step>=s?"#f97316":"rgba(255,255,255,0.1)",transition:"background 0.3s"}}/>)}
-        </div>
-
-        {step===1&&(
-          <div className="slide-in">
-            <div style={{color:"#ff4d6d",fontWeight:800,marginBottom:12,fontSize:"0.9rem"}}>🔴 {match.p1} — Pick your nickname & marker</div>
-            <input value={nick1} onChange={e=>setNick1(e.target.value)} placeholder="Funny nickname for this match..." maxLength={20}
-              style={{width:"100%",background:"rgba(255,255,255,0.07)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:11,padding:"10px 14px",color:"#fff",fontSize:"0.9rem",fontFamily:"inherit",outline:"none",marginBottom:12}}/>
-            <div style={{color:"#555",fontSize:"0.7rem",fontWeight:700,marginBottom:7,textTransform:"uppercase",letterSpacing:1}}>Pick Marker</div>
-            <MarkerGrid selected={m1} onSelect={setM1} exclude={null}/>
-            {m1&&<div style={{marginTop:8,color:"#aaa",fontSize:"0.78rem"}}>Selected: {MARKERS_BY_ID[m1]?.emoji} {MARKERS_BY_ID[m1]?.name}</div>}
-            <Btn onClick={()=>m1&&nick1.trim()&&setStep(2)} disabled={!m1||!nick1.trim()} color="linear-gradient(135deg,#f97316,#ea580c)" style={{marginTop:14,width:"100%"}}>
-              {(!m1||!nick1.trim())?"Enter nickname & pick marker":"Next →"}
-            </Btn>
-          </div>
-        )}
-
-        {step===2&&(
-          <div className="slide-in">
-            <div style={{color:"#4cc9f0",fontWeight:800,marginBottom:12,fontSize:"0.9rem"}}>🔵 {match.p2} — Pick your nickname & marker</div>
-            <input value={nick2} onChange={e=>setNick2(e.target.value)} placeholder="Funny nickname for this match..." maxLength={20}
-              style={{width:"100%",background:"rgba(255,255,255,0.07)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:11,padding:"10px 14px",color:"#fff",fontSize:"0.9rem",fontFamily:"inherit",outline:"none",marginBottom:12}}/>
-            <div style={{color:"#555",fontSize:"0.7rem",fontWeight:700,marginBottom:7,textTransform:"uppercase",letterSpacing:1}}>Pick Marker (can&apos;t pick {MARKERS_BY_ID[m1]?.emoji})</div>
-            <MarkerGrid selected={m2} onSelect={setM2} exclude={m1}/>
-            {m2&&<div style={{marginTop:8,color:"#aaa",fontSize:"0.78rem"}}>Selected: {MARKERS_BY_ID[m2]?.emoji} {MARKERS_BY_ID[m2]?.name}</div>}
-            <Btn onClick={()=>m2&&nick2.trim()&&setStep(3)} disabled={!m2||!nick2.trim()} color="linear-gradient(135deg,#0891b2,#06b6d4)" style={{marginTop:14,width:"100%"}}>
-              {(!m2||!nick2.trim())?"Enter nickname & pick marker":"Next →"}
-            </Btn>
-          </div>
-        )}
-
-        {step===3&&(
-          <div className="slide-in" style={{textAlign:"center"}}>
-            <div style={{fontSize:"2rem",marginBottom:14}}>⚔️</div>
-            <div style={{display:"flex",justifyContent:"center",gap:20,marginBottom:20}}>
-              <div style={{background:"rgba(255,77,109,0.1)",border:"1.5px solid rgba(255,77,109,0.3)",borderRadius:18,padding:"18px 20px",minWidth:110}}>
-                <div style={{fontSize:"3rem",marginBottom:6}}>{MARKERS_BY_ID[m1]?.emoji||"✕"}</div>
-                <div style={{color:"#ff4d6d",fontWeight:800,fontSize:"0.85rem"}}>{nick1}</div>
-                <div style={{color:"#555",fontSize:"0.7rem",marginTop:2}}>{match.p1}</div>
-                <div style={{marginTop:5}}><RarityTag rarity={MARKERS_BY_ID[m1]?.rarity||"common"}/></div>
-              </div>
-              <div style={{color:"#444",fontWeight:900,fontSize:"1.6rem",alignSelf:"center"}}>VS</div>
-              <div style={{background:"rgba(76,201,240,0.1)",border:"1.5px solid rgba(76,201,240,0.3)",borderRadius:18,padding:"18px 20px",minWidth:110}}>
-                <div style={{fontSize:"3rem",marginBottom:6}}>{MARKERS_BY_ID[m2]?.emoji||"○"}</div>
-                <div style={{color:"#4cc9f0",fontWeight:800,fontSize:"0.85rem"}}>{nick2}</div>
-                <div style={{color:"#555",fontSize:"0.7rem",marginTop:2}}>{match.p2}</div>
-                <div style={{marginTop:5}}><RarityTag rarity={MARKERS_BY_ID[m2]?.rarity||"common"}/></div>
-              </div>
-            </div>
-            <Btn onClick={()=>onStart({nick1,nick2,marker1:MARKERS_BY_ID[m1]?.emoji||"✕",marker2:MARKERS_BY_ID[m2]?.emoji||"○"})}
-              color="linear-gradient(135deg,#7c3aed,#4f46e5)" style={{width:"100%",fontSize:"1.05rem",padding:"13px"}}>
-              🎮 LET&apos;S PLAY!
-            </Btn>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function TournamentScreen({xtraData,onUpdateXtra,username,onPlayGame}){
-  const[view,setView]=useState("hub");
+  const[view,setView]=useState("hub"); // hub|create|join|bracket|roundrobin|active
   const[tourney,setTourney]=useState(null);
   const[joinCode,setJoinCode]=useState("");
   const[joinErr,setJoinErr]=useState("");
   const[loading,setLoading]=useState(false);
-  // Join flow
-  const[joinNick,setJoinNick]=useState("");
-  const[joinMarker,setJoinMarker]=useState(null);
-  const[joinStep,setJoinStep]=useState(1); // 1=code, 2=nick+marker, 3=waiting
-  const[joinTourney,setJoinTourney]=useState(null);
-  // Create
+
+  // Create tournament
   const[tName,setTName]=useState("");
   const[tType,setTType]=useState("bracket");
   const[tMode,setTMode]=useState("classic");
-  const[tMaxPlayers,setTMaxPlayers]=useState(4);
-  // Refresh
-  const[refreshing,setRefreshing]=useState(false);
-
-  const owned=xtraData?.markers||[1,2,3,4,5,6];
+  const[tPlayers,setTPlayers]=useState([username]);
+  const[tNewPlayer,setTNewPlayer]=useState("");
 
   const createTournament=async()=>{
     const code=Math.random().toString(36).substring(2,8).toUpperCase();
-    // Host joins as first player with their username
-    const hostEntry={username,marker:owned[0]?MARKERS_BY_ID[owned[0]]?.emoji||"✕":"✕"};
-    const t={code,name:tName||`${username}'s Tournament`,type:tType,mode:tMode,
-      host:username,players:[hostEntry],maxPlayers:tMaxPlayers,
-      status:"waiting",createdAt:Date.now()};
+    const t={code,name:tName||`${username}'s Tournament`,type:tType,mode:tMode,host:username,players:[...tPlayers],status:"active",createdAt:Date.now()};
+    if(tType==="bracket")t.rounds=buildBracket(t.players);
+    else t.matches=buildRoundRobin(t.players);
     await saveTournament(code,t);
-    setTourney(t);setView("waiting");
+    setTourney(t);setView(tType==="bracket"?"bracket":"roundrobin");
   };
 
-  const lookupCode=async()=>{
+  const joinTournament=async()=>{
     if(!joinCode.trim()){setJoinErr("Enter a code!");return;}
     setLoading(true);
     const t=await loadTournament(joinCode.trim().toUpperCase());
     if(!t){setJoinErr("Tournament not found!");setLoading(false);return;}
-    if(t.status!=="waiting"){setJoinErr("This tournament has already started!");setLoading(false);return;}
-    setJoinTourney(t);setJoinErr("");setJoinStep(2);setLoading(false);
-  };
-
-  const confirmJoin=async()=>{
-    if(!joinNick.trim()||!joinMarker)return;
-    // Re-fetch latest tourney to avoid race conditions
-    const latest=await loadTournament(joinTourney.code);
-    if(!latest){setJoinErr("Tournament disappeared!");return;}
-    if(latest.players.length>=latest.maxPlayers){setJoinErr("Tournament is full!");return;}
-    if(latest.players.some(p=>p.username===username)){setJoinErr("You already joined!");return;}
-    const newEntry={username,nick:joinNick.trim(),marker:MARKERS_BY_ID[joinMarker]?.emoji||"○"};
-    latest.players.push(newEntry);
-    await saveTournament(latest.code,latest);
-    setJoinTourney(latest);setJoinStep(3);
-  };
-
-  const refreshTourney=async()=>{
-    if(!tourney)return;setRefreshing(true);
-    const t=await loadTournament(tourney.code);
-    if(t)setTourney(t);setRefreshing(false);
-  };
-
-  const startTournament=async()=>{
-    if(!tourney||tourney.players.length<2)return;
-    const playerNames=tourney.players.map(p=>p.nick||p.username);
-    const t={...tourney,status:"active"};
-    if(t.type==="bracket")t.rounds=buildBracket(playerNames);
-    else t.matches=buildRoundRobin(playerNames);
-    await saveTournament(t.code,t);
-    setTourney(t);setView(t.type==="bracket"?"bracket":"roundrobin");
+    setTourney(t);setView(t.type==="bracket"?"bracket":"roundrobin");setJoinErr("");
+    setLoading(false);
   };
 
   const setMatchWinner=async(roundIdx,matchIdx,winnerName)=>{
-    const latest=await loadTournament(tourney.code)||tourney;
-    const t={...latest};
+    const t={...tourney};
     if(t.type==="bracket"){
       t.rounds[roundIdx][matchIdx].winner=winnerName;
-      if(roundIdx+1<t.rounds.length)
-        t.rounds[roundIdx+1][Math.floor(matchIdx/2)][matchIdx%2===0?"p1":"p2"]=winnerName;
+      if(roundIdx+1<t.rounds.length)t.rounds[roundIdx+1][Math.floor(matchIdx/2)][matchIdx%2===0?"p1":"p2"]=winnerName;
     }else{
-      if(matchIdx>=0&&matchIdx<t.matches.length){t.matches[matchIdx].winner=winnerName;t.matches[matchIdx].played=true;}
+      const mi=t.matches.findIndex(m=>t.matches.indexOf(m)===matchIdx);
+      if(mi>=0){t.matches[mi].winner=winnerName;t.matches[mi].played=true;}
     }
     await saveTournament(t.code,t);setTourney({...t});
-    if(winnerName===username||(tourney.players.find(p=>p.nick===winnerName)?.username===username)){
-      const newData={...xtraData,coins:(xtraData?.coins||0)+COIN_REWARDS.tournament_match,
-        records:{...(xtraData?.records||{}),tournamentWins:(xtraData?.records?.tournamentWins||0)+1}};
+    // Check if winner is local user and award coins
+    if(winnerName===username){
+      const newData={...xtraData,coins:(xtraData?.coins||0)+COIN_REWARDS.tournament_match,records:{...(xtraData?.records||{}),tournamentWins:(xtraData?.records?.tournamentWins||0)+1}};
       const newAch=checkNewAchievements(newData.records,newData.records?.achievements||[]);
       if(newAch.length){newData.coins+=newAch.reduce((s,a)=>s+a.coins,0);newData.records.achievements=[...(newData.records.achievements||[]),...newAch.map(a=>a.id)];}
       await saveXtraData(username,newData);onUpdateXtra(newData);
     }
   };
 
+  // Calculate round-robin standings
   const getRRStandings=()=>{
     if(!tourney||tourney.type!=="roundrobin")return[];
-    const pts={};(tourney.players||[]).forEach(p=>{const n=p.nick||p.username;pts[n]=0;});
-    (tourney.matches||[]).filter(m=>m.winner).forEach(m=>pts[m.winner]=(pts[m.winner]||0)+1);
+    const pts={};tourney.players.forEach(p=>pts[p]=0);
+    tourney.matches.filter(m=>m.winner).forEach(m=>pts[m.winner]=(pts[m.winner]||0)+1);
     return Object.entries(pts).sort(([,a],[,b])=>b-a);
   };
 
-  // ── HUB ──────────────────────────────────────────────────
   if(view==="hub")return(
     <div style={{color:"#fff"}}>
       <h3 className="game-title" style={{color:"#f97316",margin:"0 0 16px",fontSize:"1.3rem"}}>🏟️ Tournament Hub</h3>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
-        {[{icon:"➕",label:"Create Tournament",sub:"Host a bracket or round robin",action:()=>setView("create"),color:"#7c3aed"},
-          {icon:"🔑",label:"Join Tournament",sub:"Enter the host's code",action:()=>{setView("join");setJoinStep(1);setJoinCode("");setJoinErr("");},color:"#0891b2"}].map(b=>(
+        {[{icon:"➕",label:"Create Tournament",sub:"Host your own bracket",action:()=>setView("create"),color:"#7c3aed"},
+          {icon:"🔑",label:"Join by Code",sub:"Enter a friend's code",action:()=>setView("join"),color:"#0891b2"}].map(b=>(
           <button key={b.label} onClick={b.action} style={{background:`${b.color}22`,border:`1.5px solid ${b.color}55`,borderRadius:16,padding:20,cursor:"pointer",fontFamily:"inherit",color:"#fff",textAlign:"left",transition:"all 0.2s"}}
             onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"} onMouseLeave={e=>e.currentTarget.style.transform="none"}>
             <div style={{fontSize:"2rem",marginBottom:6}}>{b.icon}</div>
@@ -1796,14 +1705,13 @@ function TournamentScreen({xtraData,onUpdateXtra,username,onPlayGame}){
           </button>
         ))}
       </div>
-      <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"12px 14px",color:"#555",fontSize:"0.78rem",lineHeight:1.7}}>
-        <div style={{color:"#aaa",fontWeight:700,marginBottom:5}}>📖 How it works</div>
-        <div>Host creates a tournament and shares the code. Players join themselves, pick a funny nickname and a marker. Once everyone is in, the host hits Start. Before each match both players pick their nicknames and markers for that round. No rematches — winner moves on! 🏆</div>
+      <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"12px 14px",color:"#555",fontSize:"0.78rem",lineHeight:1.6}}>
+        <div style={{color:"#aaa",fontWeight:700,marginBottom:6}}>📖 How it works</div>
+        <div>Create a tournament and choose Bracket or Round Robin. Add players (anyone in the room), pick a game mode, and play each match on this device. Results are tracked automatically and synced with a shareable code. Win coins for each victory! 🪙</div>
       </div>
     </div>
   );
 
-  // ── CREATE ────────────────────────────────────────────────
   if(view==="create")return(
     <div style={{color:"#fff"}}>
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
@@ -1812,170 +1720,53 @@ function TournamentScreen({xtraData,onUpdateXtra,username,onPlayGame}){
       </div>
       <div style={{marginBottom:12}}>
         <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:1}}>Tournament Name</div>
-        <input value={tName} onChange={e=>setTName(e.target.value)} placeholder={`${username}'s Tournament`}
-          style={{width:"100%",background:"rgba(255,255,255,0.07)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:12,padding:"10px 14px",color:"#fff",fontSize:"0.9rem",fontFamily:"inherit",outline:"none"}}/>
+        <input value={tName} onChange={e=>setTName(e.target.value)} placeholder={`${username}'s Tournament`} style={{width:"100%",background:"rgba(255,255,255,0.07)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:12,padding:"10px 14px",color:"#fff",fontSize:"0.9rem",fontFamily:"inherit",outline:"none"}}/>
       </div>
       <div style={{marginBottom:12}}>
         <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:1}}>Format</div>
         <div style={{display:"flex",gap:8}}>
-          {["bracket","roundrobin"].map(t=>(
-            <button key={t} onClick={()=>setTType(t)} style={{flex:1,background:tType===t?"rgba(249,115,22,0.25)":"rgba(255,255,255,0.05)",border:`1.5px solid ${tType===t?"#f97316":"rgba(255,255,255,0.1)"}`,borderRadius:12,padding:"10px",cursor:"pointer",fontFamily:"inherit",color:tType===t?"#fb923c":"#888",fontWeight:700,fontSize:"0.83rem"}}>
-              {t==="bracket"?"🏆 Bracket":"🔄 Round Robin"}
-            </button>
-          ))}
+          {["bracket","roundrobin"].map(t=><button key={t} onClick={()=>setTType(t)} style={{flex:1,background:tType===t?"rgba(249,115,22,0.25)":"rgba(255,255,255,0.05)",border:`1.5px solid ${tType===t?"#f97316":"rgba(255,255,255,0.1)"}`,borderRadius:12,padding:"10px",cursor:"pointer",fontFamily:"inherit",color:tType===t?"#fb923c":"#888",fontWeight:700,fontSize:"0.83rem"}}>{t==="bracket"?"🏆 Bracket":"🔄 Round Robin"}</button>)}
         </div>
       </div>
       <div style={{marginBottom:12}}>
         <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:1}}>Game Mode</div>
         <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {GAME_MODES_INFO.map(m=>(
-            <button key={m.id} onClick={()=>setTMode(m.id)} style={{background:tMode===m.id?"rgba(249,115,22,0.25)":"rgba(255,255,255,0.05)",border:`1.5px solid ${tMode===m.id?"#f97316":"rgba(255,255,255,0.1)"}`,borderRadius:10,padding:"6px 12px",cursor:"pointer",fontFamily:"inherit",color:tMode===m.id?"#fb923c":"#888",fontSize:"0.78rem",fontWeight:700}}>
-              {m.icon} {m.label}
-            </button>
-          ))}
+          {GAME_MODES_INFO.map(m=><button key={m.id} onClick={()=>setTMode(m.id)} style={{background:tMode===m.id?"rgba(249,115,22,0.25)":"rgba(255,255,255,0.05)",border:`1.5px solid ${tMode===m.id?"#f97316":"rgba(255,255,255,0.1)"}`,borderRadius:10,padding:"6px 12px",cursor:"pointer",fontFamily:"inherit",color:tMode===m.id?"#fb923c":"#888",fontSize:"0.78rem",fontWeight:700}}>{m.icon} {m.label}</button>)}
         </div>
       </div>
-      <div style={{marginBottom:16}}>
-        <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:1}}>Max Players</div>
-        <div style={{display:"flex",gap:6}}>
-          {[2,4,8,16].map(n=>(
-            <button key={n} onClick={()=>setTMaxPlayers(n)} style={{flex:1,background:tMaxPlayers===n?"rgba(249,115,22,0.25)":"rgba(255,255,255,0.05)",border:`1.5px solid ${tMaxPlayers===n?"#f97316":"rgba(255,255,255,0.1)"}`,borderRadius:10,padding:"8px",cursor:"pointer",fontFamily:"inherit",color:tMaxPlayers===n?"#fb923c":"#888",fontWeight:700,fontSize:"0.88rem"}}>
-              {n}
-            </button>
+      <div style={{marginBottom:14}}>
+        <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:1}}>Players ({tPlayers.length})</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+          {tPlayers.map(p=>(
+            <div key={p} style={{background:"rgba(249,115,22,0.15)",border:"1px solid rgba(249,115,22,0.3)",borderRadius:8,padding:"3px 10px",color:"#fb923c",fontWeight:700,fontSize:"0.78rem",display:"flex",gap:6,alignItems:"center"}}>
+              {p}{p!==username&&<span onClick={()=>setTPlayers(prev=>prev.filter(x=>x!==p))} style={{cursor:"pointer",color:"#f43f5e"}}>×</span>}
+            </div>
           ))}
         </div>
+        <div style={{display:"flex",gap:8}}>
+          <input value={tNewPlayer} onChange={e=>setTNewPlayer(e.target.value)} placeholder="Add player name..." onKeyDown={e=>{if(e.key==="Enter"&&tNewPlayer.trim()){setTPlayers(p=>[...p,tNewPlayer.trim()]);setTNewPlayer("");}}}
+            style={{flex:1,background:"rgba(255,255,255,0.07)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"8px 12px",color:"#fff",fontSize:"0.85rem",fontFamily:"inherit",outline:"none"}}/>
+          <Btn small onClick={()=>{if(tNewPlayer.trim()){setTPlayers(p=>[...p,tNewPlayer.trim()]);setTNewPlayer("");}}} color="#f97316">Add</Btn>
+        </div>
       </div>
-      <Btn onClick={createTournament} color="linear-gradient(135deg,#f97316,#ea580c)" style={{width:"100%"}}>
-        🏟️ Create &amp; Get Code!
-      </Btn>
+      <Btn onClick={createTournament} disabled={tPlayers.length<2} color="linear-gradient(135deg,#f97316,#ea580c)" style={{width:"100%"}}>🏟️ Create & Start!</Btn>
     </div>
   );
 
-  // ── JOIN FLOW ─────────────────────────────────────────────
   if(view==="join")return(
     <div style={{color:"#fff"}}>
       <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
         <Btn small onClick={()=>setView("hub")}>← Back</Btn>
         <h3 className="game-title" style={{color:"#0891b2",margin:0,fontSize:"1.2rem"}}>🔑 Join Tournament</h3>
       </div>
-      <div style={{display:"flex",gap:6,marginBottom:18}}>
-        {[1,2,3].map(s=><div key={s} style={{flex:1,height:4,borderRadius:4,background:joinStep>=s?"#0891b2":"rgba(255,255,255,0.1)",transition:"background 0.3s"}}/>)}
-      </div>
-
-      {joinStep===1&&(
-        <div className="slide-in">
-          <div style={{color:"#aaa",fontSize:"0.85rem",marginBottom:12}}>Enter the 6-letter code from your host.</div>
-          <input value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} placeholder="ABC123" maxLength={6}
-            style={{width:"100%",background:"rgba(255,255,255,0.07)",border:"1.5px solid rgba(255,255,255,0.15)",borderRadius:12,padding:"14px",color:"#fff",fontSize:"1.5rem",fontFamily:"inherit",outline:"none",textAlign:"center",letterSpacing:8,marginBottom:12}}/>
-          {joinErr&&<div style={{color:"#f43f5e",fontWeight:700,fontSize:"0.82rem",marginBottom:10}}>{joinErr}</div>}
-          <Btn onClick={lookupCode} disabled={loading||joinCode.length<4} color="linear-gradient(135deg,#0891b2,#06b6d4)" style={{width:"100%"}}>
-            {loading?"Finding...":"🔍 Find Tournament"}
-          </Btn>
-        </div>
-      )}
-
-      {joinStep===2&&joinTourney&&(
-        <div className="slide-in">
-          <div style={{background:"rgba(249,115,22,0.1)",border:"1px solid rgba(249,115,22,0.3)",borderRadius:14,padding:"12px 14px",marginBottom:14}}>
-            <div style={{fontWeight:800,fontSize:"0.95rem",marginBottom:2}}>{joinTourney.name}</div>
-            <div style={{color:"#555",fontSize:"0.72rem"}}>{joinTourney.type==="bracket"?"🏆 Bracket":"🔄 Round Robin"} · {GAME_MODES_INFO.find(m=>m.id===joinTourney.mode)?.icon} {GAME_MODES_INFO.find(m=>m.id===joinTourney.mode)?.label} · {joinTourney.players.length}/{joinTourney.maxPlayers} players</div>
-          </div>
-          <div style={{marginBottom:12}}>
-            <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:1}}>Your Funny Nickname</div>
-            <input value={joinNick} onChange={e=>setJoinNick(e.target.value)} placeholder="e.g. MegaSnail99" maxLength={20}
-              style={{width:"100%",background:"rgba(255,255,255,0.07)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:11,padding:"10px 14px",color:"#fff",fontSize:"0.95rem",fontFamily:"inherit",outline:"none"}}/>
-          </div>
-          <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:7,textTransform:"uppercase",letterSpacing:1}}>Pick Your Marker</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6,maxHeight:180,overflowY:"auto",marginBottom:12}}>
-            {MARKERS.map(mk=>{
-              const r=RARITY[mk.rarity];const isOwned=(xtraData?.markers||[1,2,3,4,5,6]).includes(mk.id);
-              return(
-                <button key={mk.id} onClick={()=>setJoinMarker(mk.id===joinMarker?null:mk.id)}
-                  title={`${mk.name} · ${r.label}`}
-                  style={{width:48,height:48,borderRadius:10,border:`2px solid ${joinMarker===mk.id?r.color:"rgba(255,255,255,0.08)"}`,
-                    background:joinMarker===mk.id?r.bg:"rgba(255,255,255,0.03)",fontSize:"1.5rem",cursor:"pointer",
-                    display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.14s",
-                    opacity:isOwned?1:0.35,boxShadow:joinMarker===mk.id?`0 0 12px ${r.glow}`:"none",fontFamily:"inherit"}}>
-                  {mk.emoji}
-                </button>
-              );
-            })}
-          </div>
-          {joinMarker&&<div style={{color:"#aaa",fontSize:"0.78rem",marginBottom:10}}>Selected: {MARKERS_BY_ID[joinMarker]?.emoji} {MARKERS_BY_ID[joinMarker]?.name}</div>}
-          {joinErr&&<div style={{color:"#f43f5e",fontWeight:700,fontSize:"0.82rem",marginBottom:10}}>{joinErr}</div>}
-          <Btn onClick={confirmJoin} disabled={!joinNick.trim()||!joinMarker} color="linear-gradient(135deg,#0891b2,#06b6d4)" style={{width:"100%"}}>
-            ✅ Join Tournament!
-          </Btn>
-        </div>
-      )}
-
-      {joinStep===3&&(
-        <div className="slide-in" style={{textAlign:"center"}}>
-          <div style={{fontSize:"3rem",marginBottom:12}}>🎉</div>
-          <div style={{fontWeight:800,fontSize:"1.1rem",marginBottom:8}}>You&apos;re in!</div>
-          <div style={{color:"#555",fontSize:"0.83rem",marginBottom:20}}>Wait for the host to start the tournament. Ask them to hit &ldquo;Start&rdquo; when everyone has joined!</div>
-          <Btn onClick={()=>{setTourney(joinTourney);setView("waiting");}} color="linear-gradient(135deg,#f97316,#ea580c)" style={{width:"100%"}}>
-            👀 View Lobby
-          </Btn>
-        </div>
-      )}
+      <div style={{color:"#555",fontSize:"0.83rem",marginBottom:12}}>Enter the 6-character code from your tournament host.</div>
+      <input value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} placeholder="ABC123" maxLength={6}
+        style={{width:"100%",background:"rgba(255,255,255,0.07)",border:"1.5px solid rgba(255,255,255,0.15)",borderRadius:12,padding:"14px",color:"#fff",fontSize:"1.5rem",fontFamily:"inherit",outline:"none",textAlign:"center",letterSpacing:8,marginBottom:12}}/>
+      {joinErr&&<div style={{color:"#f43f5e",fontWeight:700,fontSize:"0.82rem",marginBottom:10}}>{joinErr}</div>}
+      <Btn onClick={joinTournament} disabled={loading||joinCode.length<4} color="linear-gradient(135deg,#0891b2,#06b6d4)" style={{width:"100%"}}>{loading?"Loading...":"🔍 Find Tournament"}</Btn>
     </div>
   );
 
-  // ── WAITING ROOM ──────────────────────────────────────────
-  if(view==="waiting"&&tourney)return(
-    <div style={{color:"#fff"}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <Btn small onClick={()=>setView("hub")}>← Back</Btn>
-          <div>
-            <h3 className="game-title" style={{color:"#f97316",margin:0,fontSize:"1.1rem"}}>{tourney.name}</h3>
-            <div style={{color:"#555",fontSize:"0.7rem"}}>Waiting for players…</div>
-          </div>
-        </div>
-        <div style={{background:"rgba(255,255,255,0.08)",borderRadius:10,padding:"4px 12px",color:"#fbbf24",fontSize:"0.9rem",fontWeight:900,letterSpacing:3}}>{tourney.code}</div>
-      </div>
-      <div style={{background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.25)",borderRadius:14,padding:"10px 14px",marginBottom:14,fontSize:"0.8rem",color:"#aaa"}}>
-        📣 Share the code <strong style={{color:"#fbbf24",letterSpacing:2}}>{tourney.code}</strong> with your friends — they can join from the Tournament Hub!
-      </div>
-      <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:10,textTransform:"uppercase",letterSpacing:1}}>
-        Players ({tourney.players.length}/{tourney.maxPlayers})
-      </div>
-      <div style={{display:"flex",flexDirection:"column",gap:7,marginBottom:16}}>
-        {tourney.players.map((p,i)=>{
-          const displayName=p.nick||p.username;const markerEmoji=p.marker||"✕";
-          return(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:12,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:12,padding:"10px 14px"}}>
-              <div style={{fontSize:"1.8rem"}}>{markerEmoji}</div>
-              <div style={{flex:1}}>
-                <div style={{fontWeight:800,fontSize:"0.9rem"}}>{displayName}</div>
-                {p.nick&&<div style={{color:"#555",fontSize:"0.7rem"}}>{p.username}</div>}
-              </div>
-              {p.username===tourney.host&&<span style={{color:"#fbbf24",fontSize:"0.7rem",fontWeight:700}}>👑 HOST</span>}
-            </div>
-          );
-        })}
-        {Array(Math.max(0,tourney.maxPlayers-tourney.players.length)).fill(0).map((_,i)=>(
-          <div key={i} style={{display:"flex",alignItems:"center",gap:12,background:"rgba(255,255,255,0.02)",border:"1px dashed rgba(255,255,255,0.08)",borderRadius:12,padding:"10px 14px",color:"#333"}}>
-            <div style={{fontSize:"1.8rem",opacity:.3}}>❓</div>
-            <div style={{fontSize:"0.85rem"}}>Waiting for player…</div>
-          </div>
-        ))}
-      </div>
-      <div style={{display:"flex",gap:8}}>
-        <Btn onClick={refreshTourney} disabled={refreshing} style={{flex:1}}>
-          {refreshing?"Refreshing…":"🔄 Refresh"}
-        </Btn>
-        {tourney.host===username&&(
-          <Btn onClick={startTournament} disabled={tourney.players.length<2} color="linear-gradient(135deg,#f97316,#ea580c)" style={{flex:2}}>
-            {tourney.players.length<2?"Need 2+ players":"▶ Start Tournament!"}
-          </Btn>
-        )}
-      </div>
-    </div>
-  );
-
-  // ── BRACKET / ROUND ROBIN ─────────────────────────────────
   if((view==="bracket"||view==="roundrobin")&&tourney){
     const modeInfo=GAME_MODES_INFO.find(m=>m.id===tourney.mode)||GAME_MODES_INFO[0];
     const standings=getRRStandings();
@@ -1989,34 +1780,29 @@ function TournamentScreen({xtraData,onUpdateXtra,username,onPlayGame}){
               <div style={{color:"#555",fontSize:"0.7rem"}}>{modeInfo.icon} {modeInfo.label} · {tourney.type==="bracket"?"Single Elimination":"Round Robin"}</div>
             </div>
           </div>
-          <div style={{display:"flex",gap:6,alignItems:"center"}}>
-            <Btn small onClick={refreshTourney}>{refreshing?"…":"🔄"}</Btn>
-            <div style={{background:"rgba(255,255,255,0.08)",borderRadius:10,padding:"4px 10px",color:"#888",fontSize:"0.75rem",fontWeight:700,letterSpacing:2}}>{tourney.code}</div>
-          </div>
+          <div style={{background:"rgba(255,255,255,0.08)",borderRadius:10,padding:"4px 10px",color:"#888",fontSize:"0.75rem",fontWeight:700,letterSpacing:2}}>{tourney.code}</div>
         </div>
 
         {tourney.type==="bracket"&&(
           <div style={{overflowX:"auto"}}>
             <div style={{display:"flex",gap:16,minWidth:"max-content"}}>
               {tourney.rounds.map((round,ri)=>(
-                <div key={ri} style={{display:"flex",flexDirection:"column",gap:8,justifyContent:"space-around",minWidth:150}}>
-                  <div style={{color:"#555",fontSize:"0.68rem",fontWeight:700,textAlign:"center",marginBottom:4,textTransform:"uppercase"}}>
-                    {ri===tourney.rounds.length-1?"🏆 Final":`Round ${ri+1}`}
-                  </div>
+                <div key={ri} style={{display:"flex",flexDirection:"column",gap:8,justifyContent:"space-around",minWidth:140}}>
+                  <div style={{color:"#555",fontSize:"0.68rem",fontWeight:700,textAlign:"center",marginBottom:4,textTransform:"uppercase"}}>Round {ri+1}</div>
                   {round.map((match,mi)=>(
                     <div key={mi} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,padding:10}}>
                       {[match.p1,match.p2].map((p,pi)=>(
                         <div key={pi} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 6px",borderRadius:8,background:match.winner===p?"rgba(249,115,22,0.2)":"transparent",marginBottom:pi===0?4:0}}>
                           <span style={{fontSize:"0.78rem",fontWeight:700,color:p?match.winner===p?"#fb923c":"#aaa":"#333"}}>{p||"TBD"}</span>
+                          {p&&!match.winner&&(
+                            <div style={{display:"flex",gap:4}}>
+                              <button onClick={()=>setMatchWinner(ri,mi,p)} style={{fontSize:"0.65rem",background:"rgba(74,222,128,0.2)",border:"1px solid rgba(74,222,128,0.4)",borderRadius:6,padding:"2px 7px",color:"#4ade80",cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>WIN</button>
+                              <button onClick={()=>{if(onPlayGame)onPlayGame(tourney.mode,{name1:match.p1||"P1",name2:match.p2||"P2"},{ri,mi,code:tourney.code,tourney,setMatchWinner});}} style={{fontSize:"0.65rem",background:"rgba(99,102,241,0.2)",border:"1px solid rgba(99,102,241,0.4)",borderRadius:6,padding:"2px 7px",color:"#a5b4fc",cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>PLAY</button>
+                            </div>
+                          )}
                           {match.winner===p&&<span style={{fontSize:"0.7rem"}}>🏆</span>}
                         </div>
                       ))}
-                      {match.p1&&match.p2&&!match.winner&&(
-                        <button onClick={()=>{if(onPlayGame)onPlayGame(tourney.mode,{name1:match.p1,name2:match.p2},{ri,mi,code:tourney.code,setMatchWinner});}}
-                          style={{width:"100%",marginTop:6,fontSize:"0.68rem",background:"linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))",border:"1px solid rgba(124,58,237,0.5)",borderRadius:8,padding:"5px",color:"#c4b5fd",cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-                          ▶ PLAY THIS MATCH
-                        </button>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -2040,19 +1826,17 @@ function TournamentScreen({xtraData,onUpdateXtra,username,onPlayGame}){
             <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Matches</div>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
               {tourney.matches.map((m,mi)=>(
-                <div key={mi} style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${m.played?"rgba(249,115,22,0.3)":"rgba(255,255,255,0.08)"}`,borderRadius:12,padding:"10px 14px"}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:m.played?0:8}}>
-                    <span style={{flex:1,fontWeight:700,fontSize:"0.83rem",color:m.winner===m.p1?"#fb923c":"#aaa"}}>{m.p1}</span>
-                    <span style={{color:"#444",fontWeight:900,fontSize:"0.8rem"}}>vs</span>
-                    <span style={{flex:1,fontWeight:700,fontSize:"0.83rem",textAlign:"right",color:m.winner===m.p2?"#fb923c":"#aaa"}}>{m.p2}</span>
-                  </div>
-                  {!m.played&&(
-                    <button onClick={()=>{if(onPlayGame)onPlayGame(tourney.mode,{name1:m.p1,name2:m.p2},{mi,code:tourney.code,setMatchWinner,isRR:true});}}
-                      style={{width:"100%",fontSize:"0.72rem",background:"linear-gradient(135deg,rgba(124,58,237,0.3),rgba(79,70,229,0.3))",border:"1px solid rgba(124,58,237,0.5)",borderRadius:8,padding:"6px",color:"#c4b5fd",cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>
-                      ▶ PLAY THIS MATCH
-                    </button>
-                  )}
-                  {m.played&&<div style={{textAlign:"center",color:"#4ade80",fontWeight:700,fontSize:"0.75rem"}}>🏆 {m.winner} wins!</div>}
+                <div key={mi} style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${m.played?"rgba(249,115,22,0.3)":"rgba(255,255,255,0.08)"}`,borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{flex:1,fontWeight:700,fontSize:"0.83rem",color:m.winner===m.p1?"#fb923c":"#aaa"}}>{m.p1}</span>
+                  <span style={{color:"#444",fontWeight:900}}>vs</span>
+                  <span style={{flex:1,fontWeight:700,fontSize:"0.83rem",textAlign:"right",color:m.winner===m.p2?"#fb923c":"#aaa"}}>{m.p2}</span>
+                  {!m.played?(
+                    <div style={{display:"flex",gap:4,marginLeft:8}}>
+                      <button onClick={()=>setMatchWinner(-1,mi,m.p1)} style={{fontSize:"0.63rem",background:"rgba(255,77,109,0.2)",border:"1px solid rgba(255,77,109,0.4)",borderRadius:6,padding:"2px 6px",color:"#ff4d6d",cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{m.p1}</button>
+                      <button onClick={()=>setMatchWinner(-1,mi,m.p2)} style={{fontSize:"0.63rem",background:"rgba(76,201,240,0.2)",border:"1px solid rgba(76,201,240,0.4)",borderRadius:6,padding:"2px 6px",color:"#4cc9f0",cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{m.p2}</button>
+                      <button onClick={()=>{if(onPlayGame)onPlayGame(tourney.mode,{name1:m.p1,name2:m.p2},{mi,code:tourney.code,tourney,setMatchWinner,isRR:true});}} style={{fontSize:"0.63rem",background:"rgba(99,102,241,0.2)",border:"1px solid rgba(99,102,241,0.4)",borderRadius:6,padding:"2px 6px",color:"#a5b4fc",cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>PLAY</button>
+                    </div>
+                  ):<span style={{marginLeft:8,color:"#4ade80",fontWeight:700,fontSize:"0.75rem"}}>🏆 {m.winner}</span>}
                 </div>
               ))}
             </div>
@@ -2274,14 +2058,14 @@ function TicTacFun(){
     await saveXtraData(user,newData);setXtraData(newData);
   };
 
-  // Handle tournament game request — show pre-match picker first
+  // Handle tournament game request
   const handleTournamentGame=(mode,{name1,name2},callback)=>{
     setSelectedGame(mode);
     setGameSettings({vsBot:false});
-    setPreMatchData({name1,name2,marker1:"✕",marker2:"○"}); // will be overwritten by TournamentPreMatch
+    setPreMatchData({name1,name2,marker1:"✕",marker2:"○"});
     setTournamentCallback(()=>callback);
     setIsXtraFunGame(true);
-    setScreen("tournament_prematch");
+    setScreen("game");
   };
 
   const goBack=()=>{setSelectedGame(null);setGameSettings(null);setPreMatchData(null);setIsXtraFunGame(false);setTournamentCallback(null);setScreen("menu");};
@@ -2303,45 +2087,6 @@ function TicTacFun(){
   if(screen==="login")return<><GlobalStyles/><LoginScreen onLogin={handleLogin}/></>;
   if(screen==="menu")return<><GlobalStyles/><MenuScreen user={user} xtraData={xtraData} onSelect={g=>{setSelectedGame(g);setIsXtraFunGame(false);setScreen("setup");}} onXtraFun={()=>setScreen("xtra")} onLogout={()=>{setUser(null);setXtraData(null);setScreen("login");}}/></>;
   if(screen==="xtra")return<><GlobalStyles/><XtraFunHub user={user} xtraData={xtraData} onUpdateXtra={updateXtraData} onBack={()=>setScreen("menu")} onPlayGame={handleTournamentGame}/></>;
-
-  if(screen==="tournament_prematch"&&selectedGame&&preMatchData){
-    const meta=GAME_META[selectedGame];
-    const match={p1:preMatchData.name1,p2:preMatchData.name2};
-    return<><GlobalStyles/><TournamentPreMatch match={match} xtraData={xtraData}
-      onCancel={()=>setScreen("xtra")}
-      onStart={(pmd)=>{
-        setPreMatchData({name1:pmd.nick1,name2:pmd.nick2,marker1:pmd.marker1,marker2:pmd.marker2});
-        setScreen("tournament_game");
-      }}/></>;
-  }
-
-  if(screen==="tournament_game"&&selectedGame&&gameSettings&&preMatchData){
-    const{vsBot,difficulty}=gameSettings;
-    const meta=GAME_META[selectedGame];
-    const names=[preMatchData.name1,preMatchData.name2];
-    const markerSyms=[preMatchData.marker1,preMatchData.marker2];
-    const backToTourney=()=>setScreen("xtra");
-    // No rematch in tournament — just go back to bracket
-    const tourneyGameEnd=({winner,draw,moves})=>{
-      handleGameEnd({winner,draw,moves,mode:selectedGame,vsBot:false,difficulty:null});
-      if(tournamentCallback){
-        const winnerName=winner===1?preMatchData.name1:preMatchData.name2;
-        const cb=tournamentCallback;
-        if(winnerName){
-          if(cb.isRR)cb.setMatchWinner(-1,cb.mi,winnerName);
-          else cb.setMatchWinner(cb.ri,cb.mi,winnerName);
-        }
-      }
-    };
-    const props={onBack:backToTourney,vsBot:false,difficulty:null,onGameEnd:tourneyGameEnd,names,markerSyms,
-      tournamentMode:true, // disables rematch button
-      onBackToTourney:backToTourney};
-    if(meta.component==="classic")return<><GlobalStyles/><NxNGame {...props} size={3} winLen={3} title={meta.title} icon={meta.icon}/></>;
-    if(meta.component==="archery")return<><GlobalStyles/><ArcheryGame {...props}/></>;
-    if(meta.component==="3d")return<><GlobalStyles/><Game3D {...props}/></>;
-    if(meta.component==="nxn")return<><GlobalStyles/><NxNGame {...props} size={meta.size} winLen={meta.winLen} title={meta.title} icon={meta.icon}/></>;
-    if(meta.component==="custom")return<><GlobalStyles/><CustomGame {...props}/></>;
-  }
 
   if(screen==="setup"&&selectedGame){
     const meta=GAME_META[selectedGame];
