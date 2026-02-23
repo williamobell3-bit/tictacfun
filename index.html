@@ -1,2078 +1,589 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
-  <title>Tic Tac Fun 🎮</title>
-  <meta name="description" content="The ultimate tic tac toe experience — 6 game modes, AI bots, 300 collectible emoji markers, tournaments, and more!"/>
-  <meta name="theme-color" content="#0a0a0f"/>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>"/>
-
-  <!-- Open Graph for sharing -->
-  <meta property="og:title" content="Tic Tac Fun 🎮"/>
-  <meta property="og:description" content="6 game modes, AI bots, 300 collectible markers, tournaments & more!"/>
-  <meta property="og:type" content="website"/>
-
-  <!-- React + Babel (no build step needed!) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.development.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.development.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0;}
-    html,body{height:100%;background:#0a0a0f;overscroll-behavior:none;}
-    #root{min-height:100vh;}
-    /* Scrollbar styling */
-    ::-webkit-scrollbar{width:6px;height:6px;}
-    ::-webkit-scrollbar-track{background:transparent;}
-    ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:3px;}
-    ::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,0.22);}
-    /* Loading screen */
-    #loading{
-      position:fixed;inset:0;background:#0a0a0f;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      z-index:9999;font-family:sans-serif;
-    }
-    #loading .logo{font-size:4rem;margin-bottom:16px;animation:spin 1.8s linear infinite;}
-    #loading .ttitle{font-size:2rem;font-weight:900;background:linear-gradient(135deg,#a855f7,#4f46e5,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px;}
-    #loading .sub{color:#444;font-size:0.85rem;}
-    @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Name Game - Multiplayer</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
-  <div id="loading">
-    <div class="logo">🎮</div>
-    <div class="ttitle">Tic Tac Fun</div>
-    <div class="sub">Loading… your adventure awaits!</div>
-  </div>
-  <div id="root"></div>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        
+        // API base URL - defaults to same server
+        const API_BASE = window.location.origin;
+        
+        // Lucide React icons as inline SVG components
+        const Users = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+        );
+        
+        const Copy = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+        );
+        
+        const Check = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+        );
+        
+        const Crown = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+            </svg>
+        );
+        
+        const AlertCircle = ({ className }) => (
+            <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+        );
 
-  <script>
-  
-  /* ══════════════════════════════════════════════════════
-     Supabase Storage — syncs data across all devices
-  ══════════════════════════════════════════════════════ */
-  const SUPABASE_URL = 'https://ctmtyzrezzijvjtxuvbd.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0bXR5enJlenppanZqdHh1dmJkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3OTIyMTksImV4cCI6MjA4NzM2ODIxOX0.OsZa7ERQrJowkdrFw5yeR6MqpOY_lgym9g9k416BOZ0';
+        function UsernameMatchGame() {
+          const [state, setState] = useState('home');
+          const [joinStep, setJoinStep] = useState(1);
+          const [hostStep, setHostStep] = useState(1);
+          const [gameCode, setGameCode] = useState('');
+          const [playerName, setPlayerName] = useState('');
+          const [username, setUsername] = useState('');
+          const [gameMode, setGameMode] = useState('classic');
+          const [theme, setTheme] = useState('');
+          const [gameData, setGameData] = useState(null);
+          const [myId, setMyId] = useState(null);
+          const [message, setMessage] = useState('');
+          const [selected, setSelected] = useState('');
+          const [guess, setGuess] = useState('');
+          const [copied, setCopied] = useState(false);
 
-  window.storage = {
-    async get(key, shared=false) {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/game_data?key=eq.${encodeURIComponent(key)}&shared=eq.${shared}&select=value`, {
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+SUPABASE_KEY }
-      });
-      const data = await res.json();
-      if (!data.length) throw new Error('Key not found');
-      return { key, value: data[0].value, shared };
-    },
-    async set(key, value, shared=false) {
-      const v = typeof value==='string' ? value : JSON.stringify(value);
-      await fetch(`${SUPABASE_URL}/rest/v1/game_data`, {
-        method: 'POST',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+SUPABASE_KEY,
-                   'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' },
-        body: JSON.stringify({ key, value: v, shared, updated_at: new Date() })
-      });
-      return { key, value: v, shared };
-    },
-    async delete(key, shared=false) {
-      await fetch(`${SUPABASE_URL}/rest/v1/game_data?key=eq.${encodeURIComponent(key)}`, {
-        method: 'DELETE',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer '+SUPABASE_KEY }
-      });
-      return { key, deleted: true };
-    }
-  };
-  </script>
+          // Poll for game updates
+          useEffect(() => {
+            if (!gameCode) return;
+            
+            const pollGame = async () => {
+              try {
+                const response = await fetch(`${API_BASE}/api/game/${gameCode}`);
+                if (response.ok) {
+                  const data = await response.json();
+                  setGameData(data);
+                }
+              } catch (error) {
+                console.error('Error polling game:', error);
+              }
+            };
+            
+            // Poll every second
+            const interval = setInterval(pollGame, 1000);
+            pollGame(); // Initial poll
+            
+            return () => clearInterval(interval);
+          }, [gameCode]);
 
+          const createGame = async () => {
+            const trimmedName = playerName.trim();
+            const trimmedUsername = username.trim();
+            
+            if (!trimmedName || !trimmedUsername) {
+              setMessage('Enter name and username');
+              return;
+            }
+            
+            if (trimmedName.length < 2 || trimmedUsername.length < 2) {
+              setMessage('Name and username must be at least 2 characters');
+              return;
+            }
+            
+            const code = Math.random().toString(36).substring(2, 6).toUpperCase();
+            const id = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 5);
+            const data = {
+              code: code,
+              mode: gameMode,
+              theme: theme,
+              state: 'lobby',
+              players: [{
+                id: id,
+                name: trimmedName,
+                username: trimmedUsername,
+                isHost: true,
+                active: true,
+                score: 0
+              }],
+              current: null,
+              winner: null
+            };
+            
+            try {
+              const response = await fetch(`${API_BASE}/api/game`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+              });
+              
+              if (response.ok) {
+                setGameCode(code);
+                setMyId(id);
+                setGameData(data);
+                setState('lobby');
+                setHostStep(1);
+                setMessage('');
+              } else {
+                setMessage('Failed to create game');
+              }
+            } catch (error) {
+              setMessage('Connection error. Is the server running?');
+            }
+          };
 
-  <script type="text/babel" data-presets="react">
-const { useState, useEffect, useRef, useCallback } = React;
+          const verifyGameCode = async () => {
+            const trimmedCode = gameCode.trim().toUpperCase();
+            
+            if (!trimmedCode) {
+              setMessage('Enter code');
+              return;
+            }
+            
+            try {
+              const response = await fetch(`${API_BASE}/api/game/${trimmedCode}`);
+              
+              if (response.ok) {
+                const data = await response.json();
+                
+                if (data.state !== 'lobby') {
+                  setMessage('Game already started');
+                  return;
+                }
+                
+                setGameCode(trimmedCode);
+                setMessage('');
+                setJoinStep(2);
+              } else {
+                setMessage('Game not found');
+              }
+            } catch (error) {
+              setMessage('Connection error. Is the server running?');
+            }
+          };
 
-/* ══════════════════════════════════════════════════════════
-   GLOBAL STYLES
-══════════════════════════════════════════════════════════ */
-const GlobalStyles = () => (
-  <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800;900&display=swap');
-    *{box-sizing:border-box;} body{margin:0;font-family:'Nunito',sans-serif;}
-    .game-title{font-family:'Fredoka One',cursive;}
-    @keyframes pop{0%{transform:scale(0.5);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
-    @keyframes floatUp{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-60px);opacity:0}}
-    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
-    @keyframes winner-flash{0%,100%{opacity:1}50%{opacity:0.6}}
-    @keyframes thinking-pulse{0%,100%{opacity:0.3;transform:scale(0.85)}50%{opacity:1;transform:scale(1.1)}}
-    @keyframes slide-in{from{transform:translateY(28px);opacity:0}to{transform:translateY(0);opacity:1}}
-    @keyframes card-flip{0%{transform:rotateY(0deg)}50%{transform:rotateY(90deg)}100%{transform:rotateY(0deg)}}
-    @keyframes rainbow{0%{color:#ff4d6d}16%{color:#fb923c}33%{color:#facc15}50%{color:#4ade80}66%{color:#60a5fa}83%{color:#a855f7}100%{color:#ff4d6d}}
-    @keyframes sparkle{0%,100%{opacity:0;transform:scale(0)}50%{opacity:1;transform:scale(1)}}
-    @keyframes glow-pulse{0%,100%{box-shadow:0 0 8px currentColor}50%{box-shadow:0 0 24px currentColor,0 0 48px currentColor}}
-    .winner-flash{animation:winner-flash 1s infinite;}
-    .float-msg{animation:floatUp 1.2s ease-out forwards;position:absolute;pointer-events:none;font-weight:900;font-size:1.1rem;}
-    .thinking-dot{animation:thinking-pulse 0.7s ease-in-out infinite;display:inline-block;}
-    .slide-in{animation:slide-in 0.3s ease-out forwards;}
-    .card-flip{animation:card-flip 0.5s ease-in-out;}
-    .rainbow-text{animation:rainbow 2s linear infinite;}
-    .glow-pulse{animation:glow-pulse 1.5s ease-in-out infinite;}
-    input::placeholder{color:#444;}
-    textarea{resize:none;}
-  `}</style>
-);
+          const joinGame = async () => {
+            const trimmedCode = gameCode.trim().toUpperCase();
+            const trimmedName = playerName.trim();
+            const trimmedUsername = username.trim();
+            
+            if (!trimmedName || !trimmedUsername) {
+              setMessage('Enter name and username');
+              return;
+            }
+            
+            if (trimmedName.length < 2 || trimmedUsername.length < 2) {
+              setMessage('Name and username must be at least 2 characters');
+              return;
+            }
+            
+            try {
+              const response = await fetch(`${API_BASE}/api/game/${trimmedCode}`);
+              
+              if (!response.ok) {
+                setMessage('Game not found');
+                return;
+              }
+              
+              const data = await response.json();
+              
+              const nameLower = trimmedName.toLowerCase();
+              const usernameLower = trimmedUsername.toLowerCase();
+              const duplicateName = data.players.some(p => p.name.toLowerCase() === nameLower);
+              const duplicateUsername = data.players.some(p => p.username.toLowerCase() === usernameLower);
+              
+              if (duplicateName) {
+                setMessage('This name is already taken. Choose a different name.');
+                return;
+              }
+              
+              if (duplicateUsername) {
+                setMessage('This username is already taken. Choose a different username.');
+                return;
+              }
+              
+              const id = Date.now().toString() + '_' + Math.random().toString(36).substring(2, 5);
+              data.players.push({
+                id: id,
+                name: trimmedName,
+                username: trimmedUsername,
+                isHost: false,
+                active: true,
+                score: 0
+              });
+              
+              const updateResponse = await fetch(`${API_BASE}/api/game`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+              });
+              
+              if (updateResponse.ok) {
+                setMyId(id);
+                setGameData(data);
+                setState('lobby');
+                setJoinStep(1);
+                setMessage('');
+              } else {
+                setMessage('Failed to join game');
+              }
+            } catch (error) {
+              setMessage('Connection error. Is the server running?');
+            }
+          };
 
-/* ══════════════════════════════════════════════════════════
-   RARITY SYSTEM
-══════════════════════════════════════════════════════════ */
-const RARITY = {
-  common:   {label:"Common",   color:"#9ca3af", bg:"rgba(156,163,175,0.12)", glow:"rgba(156,163,175,0.3)", star:"⭐"},
-  uncommon: {label:"Uncommon", color:"#4ade80", bg:"rgba(74,222,128,0.12)",  glow:"rgba(74,222,128,0.4)",  star:"🌟"},
-  rare:     {label:"Rare",     color:"#60a5fa", bg:"rgba(96,165,250,0.12)",  glow:"rgba(96,165,250,0.5)",  star:"💫"},
-  epic:     {label:"Epic",     color:"#a855f7", bg:"rgba(168,85,247,0.12)",  glow:"rgba(168,85,247,0.5)",  star:"✨"},
-  legendary:{label:"Legendary",color:"#f97316", bg:"rgba(249,115,22,0.12)",  glow:"rgba(249,115,22,0.6)",  star:"🔥"},
-  mythic:   {label:"Mythic",   color:"#ec4899", bg:"rgba(236,72,153,0.12)",  glow:"rgba(236,72,153,0.6)",  star:"💖"},
-  amazing:  {label:"Amazing",  color:"#fbbf24", bg:"rgba(251,191,36,0.15)",  glow:"rgba(251,191,36,0.8)",  star:"🌈",rainbow:true},
-};
+          const updateGame = async (updates) => {
+            const newData = { ...gameData, ...updates };
+            
+            try {
+              await fetch(`${API_BASE}/api/game`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newData)
+              });
+              
+              setGameData(newData);
+            } catch (error) {
+              console.error('Error updating game:', error);
+            }
+          };
 
-/* ══════════════════════════════════════════════════════════
-   ALL 300 MARKERS
-══════════════════════════════════════════════════════════ */
-const RAW_MARKERS = [
-  // ── COMMON (80) ──────────────────────────────────────
-  // Wild Kingdom (30)
-  ["Playful Pup","🐶","common","Wild Kingdom"],["Silly Kitty","🐱","common","Wild Kingdom"],
-  ["Tiny Mouse","🐭","common","Wild Kingdom"],["Chubby Hamster","🐹","common","Wild Kingdom"],
-  ["Fluffy Bunny","🐰","common","Wild Kingdom"],["Sneaky Fox","🦊","common","Wild Kingdom"],
-  ["Cuddly Bear","🐻","common","Wild Kingdom"],["Panda Pal","🐼","common","Wild Kingdom"],
-  ["Koala Snooze","🐨","common","Wild Kingdom"],["Baby Tiger","🐯","common","Wild Kingdom"],
-  ["Clumsy Frog","🐸","common","Wild Kingdom"],["Cheeky Monkey","🐵","common","Wild Kingdom"],
-  ["Clucky Chicken","🐔","common","Wild Kingdom"],["Waddle Penguin","🐧","common","Wild Kingdom"],
-  ["Tweet Bird","🐦","common","Wild Kingdom"],["Baby Chick","🐤","common","Wild Kingdom"],
-  ["Quacking Duck","🦆","common","Wild Kingdom"],["Slow Tortoise","🐢","common","Wild Kingdom"],
-  ["Wiggly Worm","🐛","common","Wild Kingdom"],["Quiet Snail","🐌","common","Wild Kingdom"],
-  ["Buzzy Bee","🐝","common","Wild Kingdom"],["Goldfish","🐟","common","Wild Kingdom"],
-  ["Daffy Dolphin","🐬","common","Wild Kingdom"],["Blowfish Bob","🐡","common","Wild Kingdom"],
-  ["Tropical Fish","🐠","common","Wild Kingdom"],["Red Bug","🐞","common","Wild Kingdom"],
-  ["Cricket","🦗","common","Wild Kingdom"],["Chipmunk","🐿️","common","Wild Kingdom"],
-  ["Hedgehog","🦔","common","Wild Kingdom"],["Baby Pig","🐷","common","Wild Kingdom"],
-  // Food Fighters (20)
-  ["Apple Champ","🍎","common","Food Fighters"],["Orange Burst","🍊","common","Food Fighters"],
-  ["Lemon Zap","🍋","common","Food Fighters"],["Grape Gang","🍇","common","Food Fighters"],
-  ["Berry Fresh","🍓","common","Food Fighters"],["Cherry Pop","🍒","common","Food Fighters"],
-  ["Peachy Keen","🍑","common","Food Fighters"],["Kiwi Twist","🥝","common","Food Fighters"],
-  ["Pineapple Pal","🍍","common","Food Fighters"],["Mango Magic","🥭","common","Food Fighters"],
-  ["Banana Slip","🍌","common","Food Fighters"],["Watermelon","🍉","common","Food Fighters"],
-  ["Hot Pepper","🌶️","common","Food Fighters"],["Pizza Slice","🍕","common","Food Fighters"],
-  ["Donut Delight","🍩","common","Food Fighters"],["Cookie Crunch","🍪","common","Food Fighters"],
-  ["Ice Cream","🍦","common","Food Fighters"],["Lollipop","🍭","common","Food Fighters"],
-  ["Taco Tuesday","🌮","common","Food Fighters"],["Sushi Roll","🍣","common","Food Fighters"],
-  // Retro Fun (15)
-  ["Game Boy","🎮","common","Retro Fun"],["Joystick","🕹️","common","Retro Fun"],
-  ["Dice Roll","🎲","common","Retro Fun"],["Card Shark","🃏","common","Retro Fun"],
-  ["Puzzle","🧩","common","Retro Fun"],["Magic Hat","🎩","common","Retro Fun"],
-  ["Party Horn","🎉","common","Retro Fun"],["Balloon Up","🎈","common","Retro Fun"],
-  ["Musical Note","🎵","common","Retro Fun"],["Paint Splash","🎨","common","Retro Fun"],
-  ["Mic Drop","🎤","common","Retro Fun"],["Headphones","🎧","common","Retro Fun"],
-  ["Book Worm","📚","common","Retro Fun"],["Compass","🧭","common","Retro Fun"],
-  ["Paper Plane","✈️","common","Retro Fun"],
-  // Nature's Call (15)
-  ["Sunbeam","☀️","common","Nature's Call"],["Rain Cloud","🌧️","common","Nature's Call"],
-  ["Rainbow Arc","🌈","common","Nature's Call"],["Full Moon","🌕","common","Nature's Call"],
-  ["Snowflake","❄️","common","Nature's Call"],["Fallen Leaf","🍂","common","Nature's Call"],
-  ["Bloom","🌸","common","Nature's Call"],["Sunflower","🌻","common","Nature's Call"],
-  ["Rose","🌹","common","Nature's Call"],["Cactus","🌵","common","Nature's Call"],
-  ["Palm Tree","🌴","common","Nature's Call"],["Mountain","⛰️","common","Nature's Call"],
-  ["Wave","🌊","common","Nature's Call"],["Flame","🔥","common","Nature's Call"],
-  ["Mushroom","🍄","common","Nature's Call"],
+          const startGame = () => {
+            if (gameData.players.length < 2) {
+              setMessage('Need at least 2 players to start');
+              return;
+            }
+            
+            const active = gameData.players.filter(p => p.active);
+            const randomIndex = Math.floor(Math.random() * active.length);
+            updateGame({ state: 'playing', current: active[randomIndex].id });
+          };
 
-  // ── UNCOMMON (70) ────────────────────────────────────
-  // Wild Kingdom exotic (25)
-  ["Majestic Lion","🦁","uncommon","Wild Kingdom"],["Silent Tiger","🐅","uncommon","Wild Kingdom"],
-  ["Spotted Leopard","🐆","uncommon","Wild Kingdom"],["Zebra Stripes","🦓","uncommon","Wild Kingdom"],
-  ["Giraffe Neck","🦒","uncommon","Wild Kingdom"],["Elephant March","🐘","uncommon","Wild Kingdom"],
-  ["Rhino Charge","🦏","uncommon","Wild Kingdom"],["Hippo Splash","🦛","uncommon","Wild Kingdom"],
-  ["Camel Trek","🐪","uncommon","Wild Kingdom"],["Kangaroo Hop","🦘","uncommon","Wild Kingdom"],
-  ["Bison Thunder","🦬","uncommon","Wild Kingdom"],["Wild Horse","🐎","uncommon","Wild Kingdom"],
-  ["Stag Run","🦌","uncommon","Wild Kingdom"],["Parrot Talk","🦜","uncommon","Wild Kingdom"],
-  ["Peacock Flair","🦚","uncommon","Wild Kingdom"],["Swan Lake","🦢","uncommon","Wild Kingdom"],
-  ["Flamingo Step","🦩","uncommon","Wild Kingdom"],["Eagle Eye","🦅","uncommon","Wild Kingdom"],
-  ["Night Owl","🦉","uncommon","Wild Kingdom"],["Bat Signal","🦇","uncommon","Wild Kingdom"],
-  ["Wolf Howl","🐺","uncommon","Wild Kingdom"],["Wild Boar","🐗","uncommon","Wild Kingdom"],
-  ["Raccoon Bandit","🦝","uncommon","Wild Kingdom"],["Otter Float","🦦","uncommon","Wild Kingdom"],
-  ["Gorilla Fist","🦍","uncommon","Wild Kingdom"],
-  // Ocean Deep (15)
-  ["Great White","🦈","uncommon","Ocean Deep"],["Blue Whale","🐋","uncommon","Ocean Deep"],
-  ["Humpback","🐳","uncommon","Ocean Deep"],["Octopus Ink","🐙","uncommon","Ocean Deep"],
-  ["Squid Jet","🦑","uncommon","Ocean Deep"],["Shrimp Dash","🦐","uncommon","Ocean Deep"],
-  ["Lobster Claw","🦞","uncommon","Ocean Deep"],["Crab Walk","🦀","uncommon","Ocean Deep"],
-  ["Sea Turtle","🐢","uncommon","Ocean Deep"],["Jellyfish","🪼","uncommon","Ocean Deep"],
-  ["Coral Reef","🪸","uncommon","Ocean Deep"],["Seahorse","🌊","uncommon","Ocean Deep"],
-  ["Narwhal","🦄","uncommon","Ocean Deep"],["Manta Ray","💧","uncommon","Ocean Deep"],
-  ["Deep Angler","🐟","uncommon","Ocean Deep"],
-  // Sports Zone (15)
-  ["Soccer Star","⚽","uncommon","Sports Zone"],["Slam Dunk","🏀","uncommon","Sports Zone"],
-  ["Touchdown","🏈","uncommon","Sports Zone"],["Home Run","⚾","uncommon","Sports Zone"],
-  ["Ace Serve","🎾","uncommon","Sports Zone"],["Spike","🏐","uncommon","Sports Zone"],
-  ["Knockout","🥊","uncommon","Sports Zone"],["Gold Medal","🥇","uncommon","Sports Zone"],
-  ["Race Champ","🏎️","uncommon","Sports Zone"],["Surfer","🏄","uncommon","Sports Zone"],
-  ["Archer","🏹","uncommon","Sports Zone"],["Fencer","🤺","uncommon","Sports Zone"],
-  ["Trophy","🏆","uncommon","Sports Zone"],["Mountain Biker","🚵","uncommon","Sports Zone"],
-  ["Skateboarder","🛹","uncommon","Sports Zone"],
-  // Nature's Call wild (15)
-  ["Comet Streak","☄️","uncommon","Nature's Call"],["Lightning Bolt","⚡","uncommon","Nature's Call"],
-  ["Tornado","🌪️","uncommon","Nature's Call"],["Volcano","🌋","uncommon","Nature's Call"],
-  ["Blizzard","🌨️","uncommon","Nature's Call"],["Desert Dune","🏜️","uncommon","Nature's Call"],
-  ["Everest Peak","🏔️","uncommon","Nature's Call"],["Aurora Borealis","🌌","uncommon","Nature's Call"],
-  ["Eclipse","🌑","uncommon","Nature's Call"],["Shooting Star","🌠","uncommon","Nature's Call"],
-  ["Thunder Cloud","⛈️","uncommon","Nature's Call"],["Whirlpool","🌀","uncommon","Nature's Call"],
-  ["Crystal Cave","💎","uncommon","Nature's Call"],["Glacier","🧊","uncommon","Nature's Call"],
-  ["Sandstorm","🌬️","uncommon","Nature's Call"],
+          const makeGuess = () => {
+            const trimmedGuess = guess.trim();
+            
+            if (!selected || !trimmedGuess) {
+              setMessage('Select a player and enter a guess');
+              return;
+            }
+            
+            const target = gameData.players.find(p => p.id === selected);
+            const correct = trimmedGuess.toLowerCase() === target.name.toLowerCase();
+            
+            if (correct) {
+              const players = gameData.players.map(p => {
+                if (p.id === selected) return { ...p, active: false };
+                if (p.id === gameData.current) return { ...p, score: p.score + 1 };
+                return p;
+              });
+              const remaining = players.filter(p => p.active);
+              
+              if (remaining.length === 1) {
+                updateGame({ players: players, state: 'finished', winner: remaining[0] });
+              } else {
+                updateGame({ players: players });
+              }
+            } else {
+              updateGame({ current: selected });
+            }
+            
+            setSelected('');
+            setGuess('');
+            setMessage('');
+          };
 
-  // ── RARE (55) ────────────────────────────────────────
-  // Fantasy Realm (20)
-  ["Fire Drake","🐲","rare","Fantasy Realm"],["Crystal Dragon","🐉","rare","Fantasy Realm"],
-  ["Night Sprite","🧚","rare","Fantasy Realm"],["Wizard","🧙","rare","Fantasy Realm"],
-  ["Shadow Witch","🧙‍♀️","rare","Fantasy Realm"],["Shadow Elf","🧝","rare","Fantasy Realm"],
-  ["Mermaid","🧜","rare","Fantasy Realm"],["Kraken","🐙","rare","Fantasy Realm"],
-  ["Griffin","🦅","rare","Fantasy Realm"],["Gargoyle","🗿","rare","Fantasy Realm"],
-  ["Enchanted Sword","⚔️","rare","Fantasy Realm"],["Magic Shield","🛡️","rare","Fantasy Realm"],
-  ["Troll","👹","rare","Fantasy Realm"],["Fairy Ring","💫","rare","Fantasy Realm"],
-  ["Centaur","🐴","rare","Fantasy Realm"],["Ice Witch","❄️","rare","Fantasy Realm"],
-  ["Forest Druid","🌿","rare","Fantasy Realm"],["Stone Golem","🪨","rare","Fantasy Realm"],
-  ["Dark Paladin","⚡","rare","Fantasy Realm"],["Arcane Tome","📜","rare","Fantasy Realm"],
-  // Cosmic (20)
-  ["Rocket Launch","🚀","rare","Cosmic"],["Astronaut","👨‍🚀","rare","Cosmic"],
-  ["Saturn Ring","🪐","rare","Cosmic"],["Space Station","🛸","rare","Cosmic"],
-  ["Meteor Strike","☄️","rare","Cosmic"],["Black Hole","🕳️","rare","Cosmic"],
-  ["Nebula","✨","rare","Cosmic"],["Galaxy Spiral","🌌","rare","Cosmic"],
-  ["Moon Base","🌕","rare","Cosmic"],["Solar Flare","☀️","rare","Cosmic"],
-  ["Space Whale","🐋","rare","Cosmic"],["Robot","🤖","rare","Cosmic"],
-  ["Alien","👽","rare","Cosmic"],["Wormhole","🌀","rare","Cosmic"],
-  ["Comet Core","💥","rare","Cosmic"],["Satellite","📡","rare","Cosmic"],
-  ["Starship","🌟","rare","Cosmic"],["Moon Crawler","🦂","rare","Cosmic"],
-  ["Plasma Storm","⚡","rare","Cosmic"],["Gravity Well","🔵","rare","Cosmic"],
-  // Ancient Legends (15)
-  ["Pharaoh","👑","rare","Ancient Legends"],["Roman Centurion","⚔️","rare","Ancient Legends"],
-  ["Samurai","🗡️","rare","Ancient Legends"],["Viking","⚓","rare","Ancient Legends"],
-  ["Ninja","🥷","rare","Ancient Legends"],["Pirate","🏴‍☠️","rare","Ancient Legends"],
-  ["Jester","🃏","rare","Ancient Legends"],["Alchemist","⚗️","rare","Ancient Legends"],
-  ["Oracle","🔮","rare","Ancient Legends"],["Cartographer","🗺️","rare","Ancient Legends"],
-  ["Gladiator","🛡️","rare","Ancient Legends"],["Monk","🧘","rare","Ancient Legends"],
-  ["Shaman","🌿","rare","Ancient Legends"],["Berserker","🪓","rare","Ancient Legends"],
-  ["Assassin","🗡️","rare","Ancient Legends"],
+          const copyCode = () => {
+            navigator.clipboard.writeText(gameCode);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          };
 
-  // ── EPIC (40) ────────────────────────────────────────
-  // Mythic Beasts (20)
-  ["Phoenix","🔥","epic","Mythic Beasts"],["Leviathan","🐋","epic","Mythic Beasts"],
-  ["Basilisk","🐍","epic","Mythic Beasts"],["Hydra","🐲","epic","Mythic Beasts"],
-  ["Cerberus","🐕","epic","Mythic Beasts"],["Minotaur","🐂","epic","Mythic Beasts"],
-  ["Medusa","🐍","epic","Mythic Beasts"],["Cyclops","👁️","epic","Mythic Beasts"],
-  ["Chimera","🦁","epic","Mythic Beasts"],["Banshee","👻","epic","Mythic Beasts"],
-  ["Werewolf","🐺","epic","Mythic Beasts"],["Vampire Lord","🧛","epic","Mythic Beasts"],
-  ["Lich King","💀","epic","Mythic Beasts"],["Stone Titan","🗿","epic","Mythic Beasts"],
-  ["Wraith","🌑","epic","Mythic Beasts"],["Djinn","🌪️","epic","Mythic Beasts"],
-  ["Behemoth","🦛","epic","Mythic Beasts"],["Manticore","🦁","epic","Mythic Beasts"],
-  ["Roc Bird","🦅","epic","Mythic Beasts"],["Scylla","🐙","epic","Mythic Beasts"],
-  // Cosmic Epic (20)
-  ["Supernova","💥","epic","Cosmic"],["Neutron Star","⭐","epic","Cosmic"],
-  ["Dark Matter","🕳️","epic","Cosmic"],["Void Walker","🌑","epic","Cosmic"],
-  ["Stellar Forge","🔥","epic","Cosmic"],["Cosmic Ray","✨","epic","Cosmic"],
-  ["Dimension Gate","🔵","epic","Cosmic"],["Time Warp","⏰","epic","Cosmic"],
-  ["Quantum Ghost","👻","epic","Cosmic"],["Event Horizon","🌀","epic","Cosmic"],
-  ["Antimatter","⚡","epic","Cosmic"],["Pulsar Storm","🌩️","epic","Cosmic"],
-  ["Graviton","🔮","epic","Cosmic"],["Photon Rider","💡","epic","Cosmic"],
-  ["Celestial Mage","🧙","epic","Cosmic"],["Star Breaker","💫","epic","Cosmic"],
-  ["Nova Dragon","🐉","epic","Cosmic"],["Plasma Entity","🔴","epic","Cosmic"],
-  ["Warp Titan","⚡","epic","Cosmic"],["Space Demon","👺","epic","Cosmic"],
+          const leaveGame = () => {
+            setState('home');
+            setGameData(null);
+            setGameCode('');
+            setMyId(null);
+            setMessage('');
+            setJoinStep(1);
+            setHostStep(1);
+          };
 
-  // ── LEGENDARY (25) ───────────────────────────────────
-  ["Zeus Thunder","⚡","legendary","Ancient Legends"],["Poseidon Wave","🌊","legendary","Ancient Legends"],
-  ["Hades Shadow","💀","legendary","Ancient Legends"],["Apollo Sun","☀️","legendary","Ancient Legends"],
-  ["Artemis Moon","🌙","legendary","Ancient Legends"],["Odin Allfather","🔱","legendary","Ancient Legends"],
-  ["Thor Mjolnir","🔨","legendary","Ancient Legends"],["Loki Trickster","🃏","legendary","Ancient Legends"],
-  ["Freya Love","💖","legendary","Ancient Legends"],["Ra Sun God","☀️","legendary","Ancient Legends"],
-  ["Anubis Guide","🐺","legendary","Ancient Legends"],["Osiris Rebirth","🌿","legendary","Ancient Legends"],
-  ["Dragon King","🐉","legendary","Mythic Beasts"],["Sky Father","🌌","legendary","Mythic Beasts"],
-  ["World Serpent","🐍","legendary","Mythic Beasts"],["World Tree","🌲","legendary","Mythic Beasts"],
-  ["Fenrir Wolf","🐺","legendary","Mythic Beasts"],["Typhon","🌪️","legendary","Mythic Beasts"],
-  ["Golden Dragon","🐲","legendary","Mythic Beasts"],["Simurgh","🦅","legendary","Mythic Beasts"],
-  ["Baku Dream","🐘","legendary","Mythic Beasts"],["Qilin Luck","🦄","legendary","Mythic Beasts"],
-  ["Echidna Mother","🐍","legendary","Mythic Beasts"],["Azathoth","🌌","legendary","Mythic Beasts"],
-  ["Elder Dragon","🐲","legendary","Mythic Beasts"],
+          const isMyTurn = gameData && gameData.current === myId;
+          const active = gameData ? gameData.players.filter(p => p.active) : [];
+          const amIActive = gameData && gameData.players.find(p => p.id === myId)?.active;
 
-  // ── MYTHIC (20) ──────────────────────────────────────
-  ["Infinity Wyrm","🐉","mythic","Divine Realm"],["Void Emperor","🌑","mythic","Divine Realm"],
-  ["Eternal Phoenix","🔥","mythic","Divine Realm"],["Shadow God","👁️","mythic","Divine Realm"],
-  ["Time Weaver","⏳","mythic","Divine Realm"],["Soul Harvester","💀","mythic","Divine Realm"],
-  ["Cosmic Titan","⚡","mythic","Divine Realm"],["Abyss Walker","🕳️","mythic","Divine Realm"],
-  ["Star Eater","🌌","mythic","Divine Realm"],["Dream Shaper","💭","mythic","Divine Realm"],
-  ["Fate Spinner","🕸️","mythic","Divine Realm"],["Reality Breaker","🌀","mythic","Divine Realm"],
-  ["Universe Heart","💜","mythic","Divine Realm"],["Dimension Lord","🔵","mythic","Divine Realm"],
-  ["Genesis Flame","🔥","mythic","Divine Realm"],["Chaos Sovereign","💥","mythic","Divine Realm"],
-  ["Primordial Sea","🌊","mythic","Divine Realm"],["Creation Spark","✨","mythic","Divine Realm"],
-  ["Oblivion King","🌑","mythic","Divine Realm"],["Celestial Judge","⚖️","mythic","Divine Realm"],
+          return (
+            <div className="min-h-screen bg-gradient-to-br from-green-500 via-blue-500 to-purple-600 p-6">
+              <style>{`
+                @keyframes fadeIn {
+                  from {
+                    opacity: 0;
+                    transform: translateY(10px);
+                  }
+                  to {
+                    opacity: 1;
+                    transform: translateY(0);
+                  }
+                }
+                .fade-in {
+                  animation: fadeIn 0.5s ease-out forwards;
+                }
+                .fade-in-delay-1 {
+                  animation: fadeIn 0.5s ease-out 0.1s forwards;
+                  opacity: 0;
+                }
+                .fade-in-delay-2 {
+                  animation: fadeIn 0.5s ease-out 0.2s forwards;
+                  opacity: 0;
+                }
+                .fade-in-delay-3 {
+                  animation: fadeIn 0.5s ease-out 0.3s forwards;
+                  opacity: 0;
+                }
+              `}</style>
+              <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl p-8 fade-in">
+                <div className="text-center mb-8 fade-in-delay-1">
+                  <h1 className="text-5xl font-bold bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 bg-clip-text text-transparent">The Name Game</h1>
+                  <p className="text-gray-600 mt-2">Guess the real names behind the usernames!</p>
+                </div>
 
-  // ── AMAZING (10) ─────────────────────────────────────
-  ["The Absolute","🌟","amazing","The Beyond"],["Omniscient Eye","👁️","amazing","The Beyond"],
-  ["Grand Architect","🏛️","amazing","The Beyond"],["Infinite Loop","♾️","amazing","The Beyond"],
-  ["True Void","⬛","amazing","The Beyond"],["Light Eternal","☀️","amazing","The Beyond"],
-  ["The Origin","🌌","amazing","The Beyond"],["The Unwritten","📜","amazing","The Beyond"],
-  ["Paradox","🔄","amazing","The Beyond"],["The All","🎯","amazing","The Beyond"],
-];
-
-const MARKERS = RAW_MARKERS.map((m, i) => ({
-  id: i + 1, name: m[0], emoji: m[1], rarity: m[2], theme: m[3],
-}));
-
-const MARKERS_BY_ID = Object.fromEntries(MARKERS.map(m => [m.id, m]));
-
-/* ══════════════════════════════════════════════════════════
-   PACKS
-══════════════════════════════════════════════════════════ */
-const PACKS = [
-  {
-    id:"basic", name:"Starter Pack", icon:"📦", cost:50, cards:5,
-    desc:"5 random cards, anything possible!",
-    grad:"linear-gradient(135deg,#6b7280,#9ca3af)",
-    weights:{common:52,uncommon:30,rare:12,epic:4.5,legendary:1,mythic:0.4,amazing:0.1},
-    themes:null,
-  },
-  {
-    id:"wild", name:"Wild Kingdom Pack", icon:"🌿", cost:80, cards:5,
-    desc:"All animal & nature cards",
-    grad:"linear-gradient(135deg,#22c55e,#16a34a)",
-    weights:{common:55,uncommon:35,rare:8,epic:2,legendary:0,mythic:0,amazing:0},
-    themes:["Wild Kingdom","Nature's Call","Ocean Deep"],
-  },
-  {
-    id:"food", name:"Foodie Pack", icon:"🍕", cost:60, cards:5,
-    desc:"All delicious food characters!",
-    grad:"linear-gradient(135deg,#f97316,#ea580c)",
-    weights:{common:70,uncommon:28,rare:2,epic:0,legendary:0,mythic:0,amazing:0},
-    themes:["Food Fighters","Retro Fun","Sports Zone"],
-  },
-  {
-    id:"fantasy", name:"Fantasy Pack", icon:"🧙", cost:100, cards:5,
-    desc:"Fantasy realm creatures & heroes",
-    grad:"linear-gradient(135deg,#a855f7,#7c3aed)",
-    weights:{common:20,uncommon:25,rare:30,epic:18,legendary:5.5,mythic:1.3,amazing:0.2},
-    themes:["Fantasy Realm","Ancient Legends","Mythic Beasts"],
-  },
-  {
-    id:"cosmic", name:"Cosmic Pack", icon:"🚀", cost:100, cards:5,
-    desc:"Space exploration & cosmic beings",
-    grad:"linear-gradient(135deg,#06b6d4,#0891b2)",
-    weights:{common:15,uncommon:20,rare:32,epic:24,legendary:7,mythic:1.7,amazing:0.3},
-    themes:["Cosmic","The Beyond"],
-  },
-  {
-    id:"mythic", name:"Mythic Pack", icon:"🔥", cost:200, cards:5,
-    desc:"Legendary & mythic creatures only",
-    grad:"linear-gradient(135deg,#ec4899,#db2777)",
-    weights:{common:0,uncommon:0,rare:10,epic:35,legendary:35,mythic:17,amazing:3},
-    themes:["Mythic Beasts","Ancient Legends","Divine Realm","The Beyond"],
-  },
-  {
-    id:"supreme", name:"Supreme Pack", icon:"👑", cost:400, cards:5,
-    desc:"Guaranteed Mythic or Amazing!",
-    grad:"linear-gradient(135deg,#fbbf24,#f59e0b)",
-    weights:{common:0,uncommon:0,rare:0,epic:0,legendary:5,mythic:65,amazing:30},
-    themes:null,
-  },
-];
-
-/* ══════════════════════════════════════════════════════════
-   ACHIEVEMENTS
-══════════════════════════════════════════════════════════ */
-const ACHIEVEMENTS = [
-  {id:"first_win",    name:"First Blood",      icon:"🩸", desc:"Win your very first game",         coins:20,  check:r=>r.totalWins>=1},
-  {id:"bot_buster",   name:"Bot Buster",        icon:"🤖", desc:"Beat bots 10 times",               coins:30,  check:r=>r.botWins>=10},
-  {id:"speed_runner", name:"Speed Runner",      icon:"⚡", desc:"Win in 3 moves (Classic)",         coins:50,  check:r=>r.fastestMoves<=3&&r.fastestMoves>0},
-  {id:"xhard_slayer", name:"Xtra Hard Slayer",  icon:"💀", desc:"Beat the Extra Hard bot",          coins:100, check:r=>r.xhardWins>=1},
-  {id:"xhard_ten",    name:"Terminator",        icon:"🦾", desc:"Beat Extra Hard 10 times",         coins:200, check:r=>r.xhardWins>=10},
-  {id:"pack_opener",  name:"Pack Opener",       icon:"📦", desc:"Open your first pack",             coins:20,  check:r=>r.packsOpened>=1},
-  {id:"collector_20", name:"Collector",         icon:"🗃️", desc:"Own 20 different markers",        coins:50,  check:r=>r.markersOwned>=20},
-  {id:"collector_50", name:"Hoarder",           icon:"📦", desc:"Own 50 different markers",        coins:100, check:r=>r.markersOwned>=50},
-  {id:"lucky_draw",   name:"Lucky Draw",        icon:"🍀", desc:"Pull a Legendary or better",      coins:75,  check:r=>r.bestPull&&["legendary","mythic","amazing"].includes(r.bestPull)},
-  {id:"got_amazing",  name:"Beyond Reality",    icon:"🌟", desc:"Own an Amazing marker",            coins:500, check:r=>r.hasAmazing},
-  {id:"tourney_win",  name:"Champion",          icon:"🏆", desc:"Win a tournament",                 coins:200, check:r=>r.tournamentWins>=1},
-  {id:"win_streak_5", name:"On Fire",           icon:"🔥", desc:"Win 5 games in a row",            coins:60,  check:r=>r.bestStreak>=5},
-  {id:"grandmaster",  name:"Grandmaster",       icon:"👑", desc:"Win 50 total games",              coins:150, check:r=>r.totalWins>=50},
-  {id:"legend",       name:"Legend",            icon:"🌌", desc:"Win 100 total games",             coins:300, check:r=>r.totalWins>=100},
-  {id:"archer_10",    name:"Robin Hood",        icon:"🏹", desc:"Win Archery mode 10 times",       coins:50,  check:r=>r.archeryWins>=10},
-  {id:"three_d_10",   name:"3D Wizard",         icon:"🎲", desc:"Win 3D mode 10 times",            coins:50,  check:r=>r.threeDWins>=10},
-  {id:"big_board",    name:"Big Board Master",  icon:"🔟", desc:"Win 10-in-a-Row",                 coins:75,  check:r=>r.tenWins>=1},
-  {id:"social",       name:"Gift Giver",        icon:"🎁", desc:"Gift a marker to someone",        coins:40,  check:r=>r.gifted>=1},
-  {id:"custom_shape", name:"Creative",          icon:"✏️", desc:"Complete a Custom Shape game",   coins:30,  check:r=>r.customWins>=1},
-  {id:"open_10packs", name:"Pack Addict",       icon:"🎰", desc:"Open 10 packs",                  coins:100, check:r=>r.packsOpened>=10},
-];
-
-/* ══════════════════════════════════════════════════════════
-   GAME CONSTANTS
-══════════════════════════════════════════════════════════ */
-const PLAYERS = {
-  1:{sym:"✕",color:"#ff4d6d",bg:"rgba(255,77,109,0.15)",border:"rgba(255,77,109,0.5)"},
-  2:{sym:"○",color:"#4cc9f0",bg:"rgba(76,201,240,0.15)",border:"rgba(76,201,240,0.5)"},
-};
-
-const DIFF_INFO = {
-  easy:  {label:"Easy",       icon:"🌱",color:"#4ade80",desc:"Mostly random"},
-  medium:{label:"Medium",     icon:"⚡",color:"#facc15",desc:"Blocks & strategy"},
-  hard:  {label:"Hard",       icon:"🔥",color:"#fb923c",desc:"Strong play"},
-  xhard: {label:"Extra Hard", icon:"💀",color:"#f43f5e",desc:"Near-unbeatable"},
-};
-const BOT_DELAY={easy:380,medium:580,hard:820,xhard:1050};
-
-const COIN_REWARDS={easy:5,medium:15,hard:30,xhard:60,draw:3,tournament_match:50,tournament_win:200,achievement:20};
-
-/* ══════════════════════════════════════════════════════════
-   WIN-CHECK UTILITIES
-══════════════════════════════════════════════════════════ */
-function checkWin2D(board,size,winLen){
-  const get=(r,c)=>(r>=0&&r<size&&c>=0&&c<size)?board[r*size+c]:0;
-  for(let r=0;r<size;r++)for(let c=0;c<size;c++){
-    const v=get(r,c);if(!v)continue;
-    for(const[dr,dc]of[[0,1],[1,0],[1,1],[1,-1]]){let n=0;while(get(r+dr*n,c+dc*n)===v)n++;if(n>=winLen)return v;}
-  }return 0;
-}
-function checkWinCustom(pl,winLen){
-  for(const key of Object.keys(pl)){
-    const[r,c]=key.split(",").map(Number);const v=pl[key];
-    for(const[dr,dc]of[[0,1],[1,0],[1,1],[1,-1]]){let n=0;while(pl[`${r+dr*n},${c+dc*n}`]===v)n++;if(n>=winLen)return v;}
-  }return 0;
-}
-function check3DWin(board){
-  const g=(l,r,c)=>board[l*9+r*3+c];const lines=[];
-  for(let l=0;l<3;l++){for(let i=0;i<3;i++){lines.push([[l,i,0],[l,i,1],[l,i,2]]);lines.push([[l,0,i],[l,1,i],[l,2,i]]);}
-    lines.push([[l,0,0],[l,1,1],[l,2,2]]);lines.push([[l,0,2],[l,1,1],[l,2,0]]);}
-  for(let r=0;r<3;r++)for(let c=0;c<3;c++)lines.push([[0,r,c],[1,r,c],[2,r,c]]);
-  lines.push([[0,0,0],[1,1,1],[2,2,2]],[[0,0,2],[1,1,1],[2,2,0]],[[0,2,0],[1,1,1],[2,0,2]],[[0,2,2],[1,1,1],[2,0,0]]);
-  for(let i=0;i<3;i++){lines.push([[0,i,0],[1,i,1],[2,i,2]],[[0,i,2],[1,i,1],[2,i,0]],[[0,0,i],[1,1,i],[2,2,i]],[[0,2,i],[1,1,i],[2,0,i]]);}
-  for(const line of lines){const vs=line.map(([l,r,c])=>g(l,r,c));if(vs[0]&&vs.every(v=>v===vs[0]))return vs[0];}
-  return 0;
-}
-
-/* ══════════════════════════════════════════════════════════
-   AI ENGINES
-══════════════════════════════════════════════════════════ */
-function minimax3x3(board,depth,isMax,alpha,beta,maxD){
-  const w=checkWin2D(board,3,3);if(w===2)return 10-depth;if(w===1)return depth-10;
-  const emp=board.reduce((a,v,i)=>v===0?[...a,i]:a,[]);
-  if(!emp.length||depth>=maxD)return 0;
-  if(isMax){let b=-Infinity;for(const i of emp){board[i]=2;b=Math.max(b,minimax3x3(board,depth+1,false,alpha,beta,maxD));board[i]=0;alpha=Math.max(alpha,b);if(beta<=alpha)break;}return b;}
-  else{let b=Infinity;for(const i of emp){board[i]=1;b=Math.min(b,minimax3x3(board,depth+1,true,alpha,beta,maxD));board[i]=0;beta=Math.min(beta,b);if(beta<=alpha)break;}return b;}
-}
-function botMoveClassic(board,diff){
-  const b=[...board],emp=b.map((v,i)=>v===0?i:-1).filter(i=>i>=0);
-  if(!emp.length)return -1;const rnd=()=>emp[Math.floor(Math.random()*emp.length)];
-  if(diff==="easy"&&Math.random()<0.75)return rnd();
-  for(const i of emp){b[i]=2;if(checkWin2D(b,3,3)===2){b[i]=0;return i;}b[i]=0;}
-  if(diff==="easy")return rnd();
-  for(const i of emp){b[i]=1;if(checkWin2D(b,3,3)===1){b[i]=0;return i;}b[i]=0;}
-  if(diff==="medium"){if(!b[4])return 4;const c=[0,2,6,8].filter(i=>!b[i]);return c.length?c[Math.floor(Math.random()*c.length)]:rnd();}
-  const maxD=diff==="hard"?5:9;let bs=-Infinity,bm=emp[0];
-  for(const i of emp){b[i]=2;const s=minimax3x3(b,0,false,-Infinity,Infinity,maxD);b[i]=0;if(s>bs){bs=s;bm=i;}}return bm;
-}
-function scoreNxN(board,size,winLen,player,r,c){
-  const get=(rr,cc)=>(rr>=0&&rr<size&&cc>=0&&cc<size)?board[rr*size+cc]:-1;
-  let score=0;
-  for(const[dr,dc]of[[0,1],[1,0],[1,1],[1,-1]]){
-    let mine=1,opens=0;
-    for(let s=1;s<winLen;s++){const v=get(r+dr*s,c+dc*s);if(v===player)mine++;else{if(v===0)opens++;break;}}
-    for(let s=1;s<winLen;s++){const v=get(r-dr*s,c-dc*s);if(v===player)mine++;else{if(v===0)opens++;break;}}
-    if(mine>=winLen)score+=1000000;else score+=Math.pow(20,mine)*(opens+0.5);
-  }return score;
-}
-function botMoveNxN(board,size,winLen,diff){
-  const b=[...board],emp=b.map((v,i)=>v===0?i:-1).filter(i=>i>=0);
-  if(!emp.length)return -1;const rnd=()=>emp[Math.floor(Math.random()*emp.length)];
-  if(diff==="easy"&&Math.random()<0.78)return rnd();
-  for(const i of emp){b[i]=2;if(checkWin2D(b,size,winLen)===2){b[i]=0;return i;}b[i]=0;}
-  if(diff==="easy")return rnd();
-  for(const i of emp){b[i]=1;if(checkWin2D(b,size,winLen)===1){b[i]=0;return i;}b[i]=0;}
-  if(diff==="medium"){let best=-1,bs=-1;for(const i of emp){const r=Math.floor(i/size),c=i%size;const s=scoreNxN(b,size,winLen,2,r,c)+scoreNxN(b,size,winLen,1,r,c)*0.9;if(s>bs){bs=s;best=i;}}return best;}
-  const noise=diff==="hard"?150:0;let best=-1,bs=-1;
-  for(const i of emp){const r=Math.floor(i/size),c=i%size;const s=scoreNxN(b,size,winLen,2,r,c)*1.1+scoreNxN(b,size,winLen,1,r,c)+Math.random()*noise;if(s>bs){bs=s;best=i;}}return best;
-}
-function botMove3D(board,diff){
-  const b=[...board],emp=b.map((v,i)=>v===0?i:-1).filter(i=>i>=0);
-  if(!emp.length)return -1;const rnd=()=>emp[Math.floor(Math.random()*emp.length)];
-  if(diff==="easy"&&Math.random()<0.75)return rnd();
-  for(const i of emp){b[i]=2;if(check3DWin(b)===2){b[i]=0;return i;}b[i]=0;}
-  if(diff==="easy")return rnd();
-  for(const i of emp){b[i]=1;if(check3DWin(b)===1){b[i]=0;return i;}b[i]=0;}
-  if(diff==="medium")return rnd();
-  const centers=[4,13,22],mids=[1,3,5,7,10,12,14,16,19,21,23,25];
-  for(const c of centers)if(!b[c])return c;
-  if(diff==="hard"){const m=mids.filter(i=>!b[i]);return(m.length&&Math.random()<0.6)?m[Math.floor(Math.random()*m.length)]:rnd();}
-  let best=-1,bs=-1;
-  for(const i of emp){b[i]=2;const my=emp.filter(j=>{if(!b[j]){b[j]=2;const w=check3DWin(b)===2;b[j]=0;return w;}return false;}).length;b[i]=0;b[i]=1;const op=emp.filter(j=>{if(!b[j]){b[j]=1;const w=check3DWin(b)===1;b[j]=0;return w;}return false;}).length;b[i]=0;const s=my*10+op*9+(centers.includes(i)?5:0)+(mids.includes(i)?2:0);if(s>bs){bs=s;best=i;}}
-  return best!==-1?best:rnd();
-}
-function botMoveCustom(placements,activeCells,winLen,diff){
-  const emp=[...activeCells].filter(k=>!placements[k]);
-  if(!emp.length)return null;const rnd=()=>emp[Math.floor(Math.random()*emp.length)];
-  if(diff==="easy"&&Math.random()<0.75)return rnd();
-  for(const k of emp){const nb={...placements,[k]:2};if(checkWinCustom(nb,winLen)===2)return k;}
-  if(diff==="easy")return rnd();
-  for(const k of emp){const nb={...placements,[k]:1};if(checkWinCustom(nb,winLen)===1)return k;}
-  if(diff==="medium")return rnd();
-  let best=null,bs=-1;
-  for(const k of emp){const[r,c]=k.split(",").map(Number);let s=0;
-    for(const[dr,dc]of[[0,1],[1,0],[1,1],[1,-1]]){let mine=1;for(let n=1;n<winLen;n++){if(placements[`${r+dr*n},${c+dc*n}`]===2)mine++;else break;}for(let n=1;n<winLen;n++){if(placements[`${r-dr*n},${c-dc*n}`]===2)mine++;else break;}s+=Math.pow(8,mine);}
-    if(s>bs){bs=s;best=k;}}return best||rnd();
-}
-function botPickArcheryTarget(board,diff){
-  const emp=board.map((v,i)=>v===0?i:-1).filter(i=>i>=0);
-  const opp=board.map((v,i)=>v===1?i:-1).filter(i=>i>=0);
-  const all=[...emp,...opp];if(!all.length)return Math.floor(Math.random()*9);
-  const rnd=()=>all[Math.floor(Math.random()*all.length)];
-  if(diff==="easy")return rnd();
-  for(const i of emp){const b=[...board];b[i]=2;if(checkWin2D(b,3,3)===2)return i;}
-  if(diff==="medium")return opp.length?opp[Math.floor(Math.random()*opp.length)]:rnd();
-  for(const i of emp){const b=[...board];b[i]=1;if(checkWin2D(b,3,3)===1)return i;}
-  if(!board[4])return 4;const corners=[0,2,6,8].filter(i=>!board[i]);
-  if(diff==="hard"&&corners.length&&Math.random()<0.65)return corners[Math.floor(Math.random()*corners.length)];
-  if(diff==="xhard"){if(opp.length&&Math.random()<0.55)return opp[Math.floor(Math.random()*opp.length)];return corners.length?corners[0]:rnd();}
-  return rnd();
-}
-
-/* ══════════════════════════════════════════════════════════
-   STORAGE HELPERS
-══════════════════════════════════════════════════════════ */
-const STOR_PREFIX="ttf_v4_";
-async function loadUserProfile(username){
-  const key=STOR_PREFIX+username.toLowerCase().replace(/\s+/g,"_");
-  try{const res=await window.storage.get(key);return JSON.parse(res.value);}
-  catch{return null;}
-}
-async function saveUserProfile(username,data){
-  const key=STOR_PREFIX+username.toLowerCase().replace(/\s+/g,"_");
-  try{await window.storage.set(key,JSON.stringify(data));return true;}catch{return false;}
-}
-async function loadXtraData(username){
-  const key=STOR_PREFIX+"xtra_"+username.toLowerCase().replace(/\s+/g,"_");
-  try{const res=await window.storage.get(key);return JSON.parse(res.value);}
-  catch{return {
-    coins:100,
-    markers:[1,2,3,4,5,6], // starter markers (first 6 common)
-    records:{totalWins:0,totalGames:0,botWins:0,xhardWins:0,archeryWins:0,threeDWins:0,tenWins:0,customWins:0,fastestMoves:0,bestStreak:0,currentStreak:0,packsOpened:0,markersOwned:6,gifted:0,tournamentWins:0,bestPull:null,hasAmazing:false,achievements:[]},
-    lastLogin:null,
-  };}
-}
-async function saveXtraData(username,data){
-  const key=STOR_PREFIX+"xtra_"+username.toLowerCase().replace(/\s+/g,"_");
-  try{await window.storage.set(key,JSON.stringify(data));return true;}catch{return false;}
-}
-async function loadTournament(code){
-  try{const res=await window.storage.get("ttf_tourney_"+code,true);return JSON.parse(res.value);}
-  catch{return null;}
-}
-async function saveTournament(code,data){
-  try{await window.storage.set("ttf_tourney_"+code,JSON.stringify(data),true);return true;}catch{return false;}
-}
-
-function rollPack(pack,count=5){
-  const rarities=Object.keys(pack.weights);
-  const total=rarities.reduce((a,r)=>a+pack.weights[r],0);
-  const results=[];
-  for(let i=0;i<count;i++){
-    let roll=Math.random()*total,chosen="common";
-    for(const r of rarities){roll-=pack.weights[r];if(roll<=0){chosen=r;break;}}
-    const pool=MARKERS.filter(m=>m.rarity===chosen&&(!pack.themes||pack.themes.includes(m.theme)));
-    if(pool.length)results.push(pool[Math.floor(Math.random()*pool.length)]);
-    else{const fb=MARKERS.filter(m=>m.rarity===chosen);results.push(fb[Math.floor(Math.random()*fb.length)]);}
-  }
-  return results;
-}
-
-function checkNewAchievements(records,existing){
-  const newOnes=[];
-  for(const a of ACHIEVEMENTS){
-    if(!existing.includes(a.id)&&a.check(records))newOnes.push(a);
-  }
-  return newOnes;
-}
-
-/* ══════════════════════════════════════════════════════════
-   SHARED UI
-══════════════════════════════════════════════════════════ */
-function Btn({children,onClick,disabled,style={},color,small}){
-  const base={border:"none",borderRadius:small?10:16,padding:small?"6px 14px":"12px 20px",fontFamily:"inherit",fontWeight:800,fontSize:small?"0.8rem":"0.95rem",cursor:disabled?"not-allowed":"pointer",transition:"all 0.2s",opacity:disabled?0.5:1,...style};
-  const themed=color?{background:color,color:"#fff"}:{background:"rgba(255,255,255,0.08)",color:"#ccc"};
-  return<button onClick={onClick} disabled={disabled} style={{...base,...themed}}
-    onMouseEnter={e=>{if(!disabled)e.currentTarget.style.opacity="0.85";}}
-    onMouseLeave={e=>{e.currentTarget.style.opacity="1";}}>{children}</button>;
-}
-
-function MarkerBadge({marker,size=36,selected,onClick,disabled}){
-  if(!marker)return null;
-  const r=RARITY[marker.rarity];
-  return(
-    <button onClick={onClick} disabled={disabled} style={{width:size,height:size,borderRadius:size/4,border:`2px solid ${selected?r.color:"rgba(255,255,255,0.15)"}`,background:selected?r.bg:"rgba(255,255,255,0.04)",fontSize:size*0.55,cursor:disabled?"default":"pointer",display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s",transform:selected?"scale(1.1)":"scale(1)",boxShadow:selected?`0 0 12px ${r.glow}`:"none",fontFamily:"inherit"}}
-      title={`${marker.name} (${r.label})`}>
-      {marker.emoji}
-    </button>
-  );
-}
-
-function RarityTag({rarity}){
-  const r=RARITY[rarity];
-  return<span className={rarity==="amazing"?"rainbow-text":""} style={{fontSize:"0.68rem",fontWeight:800,color:r.color,background:r.bg,borderRadius:6,padding:"2px 7px",border:`1px solid ${r.color}44`}}>{r.label}</span>;
-}
-
-function StatusBar({turn,winner,draw,vsBot,botThinking,names,markers}){
-  const label=(n)=>{if(names&&names[n-1])return names[n-1];return vsBot?(n===1?"You":"Bot"):`Player ${n}`;};
-  const sym=(n)=>{if(markers&&markers[n-1])return markers[n-1];return PLAYERS[n].sym;};
-  if(winner)return(
-    <div className="winner-flash" style={{background:`linear-gradient(135deg,${PLAYERS[winner].color}33,${PLAYERS[winner].color}11)`,border:`2px solid ${PLAYERS[winner].color}`,borderRadius:16,padding:"12px 20px",textAlign:"center",marginBottom:16,color:PLAYERS[winner].color,fontWeight:900,fontSize:"1.1rem"}}>
-      🏆 {label(winner)} ({sym(winner)}) wins!
-    </div>
-  );
-  if(draw)return<div style={{background:"rgba(255,255,255,0.05)",border:"2px solid rgba(255,255,255,0.18)",borderRadius:16,padding:"12px 20px",textAlign:"center",marginBottom:16,color:"#aaa",fontWeight:800}}>🤝 It's a draw!</div>;
-  return(
-    <div style={{background:PLAYERS[turn].bg,border:`2px solid ${PLAYERS[turn].border}`,borderRadius:16,padding:"10px 20px",textAlign:"center",marginBottom:16,color:PLAYERS[turn].color,fontWeight:700,fontSize:"0.95rem",transition:"all 0.3s"}}>
-      {botThinking?<span>🤖 Bot is thinking <span className="thinking-dot" style={{marginLeft:4}}>●</span><span className="thinking-dot" style={{animationDelay:"0.22s"}}>●</span><span className="thinking-dot" style={{animationDelay:"0.44s"}}>●</span></span>
-      :<span>{turn===1?"🔴":"🔵"} {label(turn)}'s turn ({sym(turn)})</span>}
-    </div>
-  );
-}
-
-function DiffBadge({difficulty}){
-  if(!difficulty)return null;const d=DIFF_INFO[difficulty];
-  return<span style={{background:`${d.color}20`,border:`1px solid ${d.color}55`,borderRadius:10,padding:"4px 10px",color:d.color,fontSize:"0.73rem",fontWeight:700}}>{d.icon} {d.label}</span>;
-}
-
-function GameShell({title,icon,onBack,children,turn,winner,draw,onRematch,extraInfo,vsBot,botThinking,difficulty,names,markers}){
-  return(
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a0a0f,#0d0d1a,#0a0f1a)",padding:16,display:"flex",flexDirection:"column",alignItems:"center"}}>
-      <div style={{width:"100%",maxWidth:640}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-          <Btn small onClick={onBack}>← Menu</Btn>
-          <h2 className="game-title" style={{color:"#fff",margin:0,fontSize:"1.25rem",flex:1}}>{icon} {title}</h2>
-          {vsBot&&<DiffBadge difficulty={difficulty}/>}
-        </div>
-        {extraInfo&&<div style={{color:"#454545",fontSize:"0.73rem",textAlign:"center",marginBottom:10,fontStyle:"italic"}}>{extraInfo}</div>}
-        <StatusBar turn={turn} winner={winner} draw={draw} vsBot={vsBot} botThinking={botThinking} names={names} markers={markers}/>
-        {children}
-        {(winner||draw)&&<Btn onClick={onRematch} color="linear-gradient(135deg,#7c3aed,#4f46e5)" style={{marginTop:16,width:"100%"}}>🔄 Play Again</Btn>}
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   SETUP SCREEN  (includes marker picking for ALL games)
-══════════════════════════════════════════════════════════ */
-function SetupScreen({gameTitle,gameIcon,onBack,onStart,xtraData,username}){
-  const[step,setStep]=useState(1); // 1=mode/diff, 2=p1 marker, 3=p2/bot marker, 4=vs screen
-  const[mode,setMode]=useState(null);
-  const[diff,setDiff]=useState(null);
-  const[marker1,setMarker1]=useState(null);
-  const[marker2,setMarker2]=useState(null);
-  const[conflict,setConflict]=useState(false);
-
-  const owned=xtraData?.markers||[1,2,3,4,5,6];
-  const allIds=MARKERS.map(m=>m.id);
-
-  const canAdvanceStep1=mode==="human"||(mode==="bot"&&diff);
-
-  const confirmStep1=()=>{ if(canAdvanceStep1) setStep(2); };
-
-  const confirmStep2=()=>{
-    if(!marker1) return;
-    if(mode==="bot"){
-      // Bot picks its own random marker (different from player 1's)
-      const pool=MARKERS.filter(m=>m.id!==marker1);
-      const botPick=pool[Math.floor(Math.random()*pool.length)];
-      setMarker2(botPick.id);
-      setStep(4); // skip step 3 entirely for bots
-    } else {
-      setStep(3);
-    }
-  };
-
-  const confirmStep3=()=>{
-    if(mode==="human"&&!marker2)return;
-    if(mode==="human"&&marker1===marker2){setConflict(true);setTimeout(()=>setConflict(false),1800);return;}
-    setStep(4);
-  };
-
-  const launch=()=>{
-    const m1=MARKERS_BY_ID[marker1];
-    const m2=MARKERS_BY_ID[marker2];
-    const settings={
-      vsBot:mode==="bot",
-      difficulty:diff,
-      markerEmoji1:m1?.emoji||"✕",
-      markerEmoji2:m2?.emoji||"○",
-    };
-    onStart(settings);
-  };
-
-  const QuickMarkerGrid=({owned:ids,selected,onSelect,exclude,allMarkers})=>{
-    const pool=MARKERS.filter(m=>(allMarkers?true:ids.includes(m.id))&&m.id!==exclude);
-    return(
-      <div style={{display:"flex",flexWrap:"wrap",gap:6,maxHeight:180,overflowY:"auto",padding:"4px 0",
-        scrollbarWidth:"thin",scrollbarColor:"rgba(255,255,255,0.15) transparent"}}>
-        {pool.map(m=>{
-          const r=RARITY[m.rarity];
-          return(
-            <button key={m.id} onClick={()=>onSelect(m.id===selected?null:m.id)}
-              title={`${m.name} · ${r.label} · ${m.theme}`}
-              style={{width:52,height:52,borderRadius:12,border:`2px solid ${selected===m.id?r.color:"rgba(255,255,255,0.1)"}`,
-                background:selected===m.id?r.bg:"rgba(255,255,255,0.04)",
-                fontSize:"1.7rem",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",
-                transition:"all 0.15s",transform:selected===m.id?"scale(1.12)":"scale(1)",
-                boxShadow:selected===m.id?`0 0 14px ${r.glow}`:"none",fontFamily:"inherit",
-                opacity:ids.includes(m.id)||allMarkers?1:0.25}}>
-              {m.emoji}
-            </button>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const ProgressBar=({total,current})=>(
-    <div style={{display:"flex",gap:6,marginBottom:20}}>
-      {Array(total).fill(0).map((_,i)=>(
-        <div key={i} style={{flex:1,height:4,borderRadius:4,background:i<current?"#7c3aed":"rgba(255,255,255,0.1)",transition:"background 0.3s"}}/>
-      ))}
-    </div>
-  );
-
-  return(
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a0a0f,#0d0d1a,#0a0f1a)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-      <div className="slide-in" style={{width:"100%",maxWidth:480,background:"rgba(255,255,255,0.045)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:26,padding:"28px 24px",color:"#fff",maxHeight:"95vh",overflowY:"auto"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
-          <Btn small onClick={step===1?onBack:()=>setStep(s=>s-1)}>←</Btn>
-          <h2 className="game-title" style={{margin:0,fontSize:"1.2rem"}}>{gameIcon} {gameTitle}</h2>
-        </div>
-        <ProgressBar total={mode==="bot"?3:4} current={step>3&&mode==="bot"?3:step}/>
-
-        {/* STEP 1 — Mode & Difficulty */}
-        {step===1&&(
-          <div className="slide-in">
-            <div style={{color:"#444",fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:2,fontWeight:700,marginBottom:10}}>Game Mode</div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:18}}>
-              {[{id:"human",icon:"👥",label:"2 Players",sub:"Local multiplayer"},{id:"bot",icon:"🤖",label:"vs Bot",sub:"Play against AI"}].map(opt=>(
-                <button key={opt.id} onClick={()=>{setMode(opt.id);if(opt.id==="human")setDiff(null);}} style={{background:mode===opt.id?"rgba(124,58,237,0.28)":"rgba(255,255,255,0.04)",border:`2px solid ${mode===opt.id?"#7c3aed":"rgba(255,255,255,0.08)"}`,borderRadius:16,padding:"16px 10px",cursor:"pointer",fontFamily:"inherit",color:mode===opt.id?"#c4b5fd":"#888",textAlign:"center",transition:"all 0.2s"}}>
-                  <div style={{fontSize:"2rem",marginBottom:4}}>{opt.icon}</div>
-                  <div style={{fontWeight:800,fontSize:"0.88rem"}}>{opt.label}</div>
-                  <div style={{fontSize:"0.66rem",marginTop:2,opacity:.7}}>{opt.sub}</div>
-                </button>
-              ))}
-            </div>
-            {mode==="bot"&&(
-              <div className="slide-in">
-                <div style={{color:"#444",fontSize:"0.72rem",textTransform:"uppercase",letterSpacing:2,fontWeight:700,marginBottom:10}}>Difficulty</div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:18}}>
-                  {Object.entries(DIFF_INFO).map(([id,d])=>(
-                    <button key={id} onClick={()=>setDiff(id)} style={{background:diff===id?`${d.color}22`:"rgba(255,255,255,0.04)",border:`2px solid ${diff===id?d.color:"rgba(255,255,255,0.08)"}`,borderRadius:14,padding:"12px 10px",cursor:"pointer",fontFamily:"inherit",color:diff===id?d.color:"#777",textAlign:"center",transition:"all 0.2s"}}>
-                      <div style={{fontSize:"1.4rem",marginBottom:3}}>{d.icon}</div>
-                      <div style={{fontWeight:800,fontSize:"0.83rem"}}>{d.label}</div>
-                      <div style={{fontSize:"0.62rem",marginTop:2,opacity:.65}}>{d.desc}</div>
+                {state === 'home' && (
+                  <div className="grid md:grid-cols-2 gap-6 fade-in-delay-2">
+                    <button onClick={() => setState('host')} className="p-8 bg-gradient-to-br from-green-500 to-green-700 text-white rounded-2xl hover:opacity-90 transition transform hover:scale-105 shadow-xl">
+                      <Users className="w-16 h-16 mx-auto mb-4" />
+                      <h2 className="text-3xl font-bold">Host Game</h2>
                     </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <Btn onClick={confirmStep1} disabled={!canAdvanceStep1} color={canAdvanceStep1?"linear-gradient(135deg,#7c3aed,#4f46e5)":undefined} style={{width:"100%"}}>
-              {canAdvanceStep1?"Next: Pick Your Marker →":mode==="bot"?"Select a difficulty":"Select a mode"}
-            </Btn>
-          </div>
-        )}
-
-        {/* STEP 2 — Player 1 picks marker */}
-        {step===2&&(
-          <div className="slide-in">
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-              <div style={{width:10,height:10,borderRadius:"50%",background:"#ff4d6d",boxShadow:"0 0 8px #ff4d6d"}}/>
-              <span style={{color:"#ff4d6d",fontWeight:800,fontSize:"0.9rem"}}>Player 1{username?` (${username})`:""} — Pick Your Marker</span>
-            </div>
-            <div style={{color:"#555",fontSize:"0.72rem",marginBottom:10}}>
-              Your collection ({owned.length} markers). Unowned markers are dimmed.
-            </div>
-            <QuickMarkerGrid owned={owned} selected={marker1} onSelect={setMarker1} allMarkers={false}/>
-            {marker1&&(
-              <div style={{marginTop:10,display:"flex",alignItems:"center",gap:10,background:"rgba(255,255,255,0.05)",borderRadius:12,padding:"10px 14px"}}>
-                <span style={{fontSize:"2rem"}}>{MARKERS_BY_ID[marker1]?.emoji}</span>
-                <div>
-                  <div style={{fontWeight:800,fontSize:"0.88rem"}}>{MARKERS_BY_ID[marker1]?.name}</div>
-                  <RarityTag rarity={MARKERS_BY_ID[marker1]?.rarity||"common"}/>
-                </div>
-              </div>
-            )}
-            <Btn onClick={confirmStep2} disabled={!marker1} color="linear-gradient(135deg,#7c3aed,#4f46e5)" style={{marginTop:14,width:"100%"}}>
-              {marker1?"Next →":"Select a marker first"}
-            </Btn>
-          </div>
-        )}
-
-        {/* STEP 3 — Player 2 / Bot marker */}
-        {step===3&&(
-          <div className="slide-in">
-            {mode==="bot"?(
-              <>
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-                  <div style={{width:10,height:10,borderRadius:"50%",background:"#4cc9f0",boxShadow:"0 0 8px #4cc9f0"}}/>
-                  <span style={{color:"#4cc9f0",fontWeight:800,fontSize:"0.9rem"}}>🤖 Pick the Bot&apos;s Marker</span>
-                </div>
-                <div style={{color:"#555",fontSize:"0.72rem",marginBottom:10}}>Choose any marker for your opponent!</div>
-                <QuickMarkerGrid owned={allIds} selected={marker2} onSelect={setMarker2} exclude={marker1} allMarkers={true}/>
-                {marker2&&(
-                  <div style={{marginTop:10,display:"flex",alignItems:"center",gap:10,background:"rgba(255,255,255,0.05)",borderRadius:12,padding:"10px 14px"}}>
-                    <span style={{fontSize:"2rem"}}>{MARKERS_BY_ID[marker2]?.emoji}</span>
-                    <div><div style={{fontWeight:800,fontSize:"0.88rem"}}>{MARKERS_BY_ID[marker2]?.name}</div><RarityTag rarity={MARKERS_BY_ID[marker2]?.rarity||"common"}/></div>
+                    <button onClick={() => setState('join')} className="p-8 bg-gradient-to-br from-purple-500 to-purple-700 text-white rounded-2xl hover:opacity-90 transition transform hover:scale-105 shadow-xl">
+                      <Copy className="w-16 h-16 mx-auto mb-4" />
+                      <h2 className="text-3xl font-bold">Join Game</h2>
+                    </button>
                   </div>
                 )}
-                <Btn onClick={()=>{const fallback=MARKERS.filter(m=>m.id!==marker1)[0];setMarker2(marker2||(fallback?.id||2));setStep(4);}} color="linear-gradient(135deg,#0891b2,#06b6d4)" style={{marginTop:14,width:"100%"}}>
-                  {marker2?"Next →":"Skip (random)"}
-                </Btn>
-              </>
-            ):(
-              <>
-                <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-                  <div style={{width:10,height:10,borderRadius:"50%",background:"#4cc9f0",boxShadow:"0 0 8px #4cc9f0"}}/>
-                  <span style={{color:"#4cc9f0",fontWeight:800,fontSize:"0.9rem"}}>Player 2 — Pick Your Marker</span>
-                </div>
-                <div style={{color:"#555",fontSize:"0.72rem",marginBottom:10}}>
-                  Player 2 can pick from ALL markers or just their own collection.
-                </div>
-                <QuickMarkerGrid owned={owned} selected={marker2} onSelect={setMarker2} exclude={marker1} allMarkers={true}/>
-                {marker2&&(
-                  <div style={{marginTop:10,display:"flex",alignItems:"center",gap:10,background:"rgba(255,255,255,0.05)",borderRadius:12,padding:"10px 14px"}}>
-                    <span style={{fontSize:"2rem"}}>{MARKERS_BY_ID[marker2]?.emoji}</span>
-                    <div><div style={{fontWeight:800,fontSize:"0.88rem"}}>{MARKERS_BY_ID[marker2]?.name}</div><RarityTag rarity={MARKERS_BY_ID[marker2]?.rarity||"common"}/></div>
+
+                {state === 'host' && hostStep === 1 && (
+                  <div className="space-y-4 fade-in-delay-2">
+                    <button onClick={() => setState('home')} className="text-blue-600 hover:underline">← Back</button>
+                    <div className="text-center mb-4">
+                      <h2 className="text-2xl font-bold text-gray-800">Host a Game</h2>
+                      <p className="text-gray-600 mt-1">Step 1: Choose game settings</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Game Mode</label>
+                      <select value={gameMode} onChange={(e) => setGameMode(e.target.value)} className="w-full p-3 border-2 rounded-lg">
+                        <option value="classic">Classic</option>
+                        <option value="speed">Speed Round</option>
+                        <option value="team">Team Mode</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Theme (Optional)</label>
+                      <input 
+                        placeholder="e.g., Movies, Animals, Food..." 
+                        value={theme} 
+                        onChange={(e) => setTheme(e.target.value)} 
+                        onKeyPress={(e) => e.key === 'Enter' && setHostStep(2)}
+                        className="w-full p-3 border-2 rounded-lg" 
+                      />
+                    </div>
+                    <button onClick={() => setHostStep(2)} className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white p-4 rounded-lg font-bold">Next</button>
                   </div>
                 )}
-                {conflict&&<div className="slide-in" style={{marginTop:8,background:"rgba(244,63,94,0.15)",border:"1px solid rgba(244,63,94,0.4)",borderRadius:10,padding:"8px 12px",color:"#f43f5e",fontWeight:700,fontSize:"0.82rem"}}>⚠️ Player 1 already claimed that marker! Choose another.</div>}
-                <Btn onClick={confirmStep3} disabled={!marker2} color="linear-gradient(135deg,#0891b2,#06b6d4)" style={{marginTop:14,width:"100%"}}>
-                  {marker2?"Next →":"Select a marker"}
-                </Btn>
-              </>
-            )}
-          </div>
-        )}
 
-        {/* STEP 4 — VS screen */}
-        {step===4&&(
-          <div className="slide-in" style={{textAlign:"center"}}>
-            <div style={{fontSize:"2rem",marginBottom:16}}>⚔️ Ready to Play!</div>
-            <div style={{display:"flex",justifyContent:"center",gap:24,marginBottom:24,flexWrap:"wrap"}}>
-              <div style={{background:"rgba(255,77,109,0.1)",border:"1.5px solid rgba(255,77,109,0.3)",borderRadius:20,padding:"20px 24px",minWidth:120}}>
-                <div style={{fontSize:"3.5rem",marginBottom:8,filter:"drop-shadow(0 0 12px rgba(255,77,109,0.6))"}}>{MARKERS_BY_ID[marker1]?.emoji||"✕"}</div>
-                <div style={{color:"#ff4d6d",fontWeight:800,fontSize:"0.9rem",marginBottom:4}}>Player 1</div>
-                <div style={{fontSize:"0.75rem",color:"#aaa",marginBottom:4}}>{MARKERS_BY_ID[marker1]?.name}</div>
-                <RarityTag rarity={MARKERS_BY_ID[marker1]?.rarity||"common"}/>
-              </div>
-              <div style={{color:"#555",fontWeight:900,fontSize:"1.8rem",alignSelf:"center"}}>VS</div>
-              <div style={{background:"rgba(76,201,240,0.1)",border:"1.5px solid rgba(76,201,240,0.3)",borderRadius:20,padding:"20px 24px",minWidth:120}}>
-                <div style={{fontSize:"3.5rem",marginBottom:8,filter:"drop-shadow(0 0 12px rgba(76,201,240,0.6))"}}>{MARKERS_BY_ID[marker2]?.emoji||"○"}</div>
-                <div style={{color:"#4cc9f0",fontWeight:800,fontSize:"0.9rem",marginBottom:4}}>{mode==="bot"?"Bot":"Player 2"}</div>
-                <div style={{fontSize:"0.75rem",color:"#aaa",marginBottom:4}}>{MARKERS_BY_ID[marker2]?.name}</div>
-                <RarityTag rarity={MARKERS_BY_ID[marker2]?.rarity||"common"}/>
-              </div>
-            </div>
-            {mode==="bot"&&<div style={{marginBottom:14}}><DiffBadge difficulty={diff}/></div>}
-            <Btn onClick={launch} color="linear-gradient(135deg,#7c3aed,#4f46e5)" style={{width:"100%",fontSize:"1.1rem",padding:"14px",letterSpacing:.5}}>
-              🎮 LET&apos;S PLAY!
-            </Btn>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   PRE-MATCH SCREEN (Xtra Fun)
-══════════════════════════════════════════════════════════ */
-function PreMatchScreen({gameTitle,gameIcon,onBack,onStart,vsBot,difficulty,xtraData1,xtraData2,username1,username2}){
-  const[name1,setName1]=useState("");
-  const[name2,setName2]=useState("");
-  const[marker1,setMarker1]=useState(null);
-  const[marker2,setMarker2]=useState(null);
-  const[conflict,setConflict]=useState(false);
-  const[step,setStep]=useState(1); // 1=p1 setup, 2=p2 setup, 3=ready
-
-  const owned1=xtraData1?.markers||[1,2];
-  const owned2=xtraData2?.markers||[1,2];
-
-  const confirmP1=()=>{if(!name1.trim()||!marker1)return;setStep(2);};
-  const confirmP2=()=>{
-    if(!name2.trim()||!marker2)return;
-    if(vsBot){setStep(3);return;}
-    if(marker1===marker2){setConflict(true);setTimeout(()=>setConflict(false),2000);return;}
-    setStep(3);
-  };
-  const launch=()=>{
-    const m1=MARKERS_BY_ID[marker1];
-    const m2=vsBot?MARKERS_BY_ID[marker2||2]:MARKERS_BY_ID[marker2];
-    onStart({name1:name1.trim()||username1,name2:vsBot?"Bot":(name2.trim()||username2||"Player 2"),marker1:m1?.emoji||"✕",marker2:m2?.emoji||"○"});
-  };
-
-  const InputRow=({label,value,onChange,placeholder})=>(
-    <div style={{marginBottom:12}}>
-      <div style={{color:"#666",fontSize:"0.72rem",fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:1}}>{label}</div>
-      <input value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} maxLength={20}
-        style={{width:"100%",background:"rgba(255,255,255,0.07)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:12,padding:"10px 14px",color:"#fff",fontSize:"0.95rem",fontFamily:"inherit",outline:"none"}}
-        onFocus={e=>e.target.style.borderColor="rgba(168,85,247,0.6)"} onBlur={e=>e.target.style.borderColor="rgba(255,255,255,0.1)"}/>
-    </div>
-  );
-
-  const MarkerGrid=({owned,selected,onSelect,exclude})=>{
-    const ownedMarkers=MARKERS.filter(m=>owned.includes(m.id)&&m.id!==exclude);
-    return(
-      <div style={{display:"flex",flexWrap:"wrap",gap:6,maxHeight:160,overflowY:"auto",padding:"4px 0"}}>
-        {ownedMarkers.map(m=>(
-          <MarkerBadge key={m.id} marker={m} size={44} selected={selected===m.id} onClick={()=>onSelect(m.id)}/>
-        ))}
-      </div>
-    );
-  };
-
-  return(
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a0a0f,#0d0d1a,#0a0f1a)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-      <div className="slide-in" style={{width:"100%",maxWidth:480,background:"rgba(255,255,255,0.045)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:26,padding:"28px 24px",color:"#fff"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
-          <Btn small onClick={onBack}>←</Btn>
-          <div>
-            <h2 className="game-title" style={{margin:0,fontSize:"1.2rem"}}>🎉 Pre-Match Setup</h2>
-            <div style={{color:"#555",fontSize:"0.73rem"}}>{gameIcon} {gameTitle}{vsBot&&<> · <span style={{color:DIFF_INFO[difficulty].color}}>{DIFF_INFO[difficulty].icon} {DIFF_INFO[difficulty].label}</span></>}</div>
-          </div>
-        </div>
-
-        {/* Step indicators */}
-        <div style={{display:"flex",gap:8,marginBottom:20}}>
-          {[1,2,3].map(s=>(
-            <div key={s} style={{flex:1,height:4,borderRadius:4,background:step>=s?"#7c3aed":"rgba(255,255,255,0.1)",transition:"background 0.3s"}}/>
-          ))}
-        </div>
-
-        {step===1&&(
-          <div className="slide-in">
-            <div style={{color:"#a855f7",fontWeight:800,marginBottom:14,fontSize:"0.9rem"}}>🔴 Player 1 — {username1}</div>
-            <InputRow label="Your Funny Nickname for this Match" value={name1} onChange={setName1} placeholder="e.g. TurboSnail9000"/>
-            <div style={{color:"#666",fontSize:"0.72rem",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Pick Your Marker</div>
-            <MarkerGrid owned={owned1} selected={marker1} onSelect={setMarker1}/>
-            {marker1&&<div style={{marginTop:8,color:"#aaa",fontSize:"0.78rem"}}>Selected: {MARKERS_BY_ID[marker1]?.emoji} {MARKERS_BY_ID[marker1]?.name}</div>}
-            <Btn onClick={confirmP1} disabled={!name1.trim()||!marker1} color="linear-gradient(135deg,#7c3aed,#4f46e5)" style={{marginTop:14,width:"100%"}}>Confirm →</Btn>
-          </div>
-        )}
-
-        {step===2&&(
-          <div className="slide-in">
-            <div style={{color:"#4cc9f0",fontWeight:800,marginBottom:14,fontSize:"0.9rem"}}>🔵 {vsBot?"Bot Setup":"Player 2"}</div>
-            {vsBot?(
-              <>
-                <div style={{color:"#666",fontSize:"0.72rem",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Bot's Marker (pick for bot, or skip)</div>
-                <MarkerGrid owned={MARKERS.map(m=>m.id)} selected={marker2} onSelect={setMarker2} exclude={marker1}/>
-                <Btn onClick={()=>{setMarker2(marker2||2);setStep(3);}} color="linear-gradient(135deg,#0891b2,#06b6d4)" style={{marginTop:14,width:"100%"}}>Ready! →</Btn>
-              </>
-            ):(
-              <>
-                <InputRow label="Your Funny Nickname for this Match" value={name2} onChange={setName2} placeholder="e.g. QuantumToast"/>
-                <div style={{color:"#666",fontSize:"0.72rem",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Pick Your Marker</div>
-                <MarkerGrid owned={owned2} selected={marker2} onSelect={setMarker2} exclude={marker1}/>
-                {marker2&&<div style={{marginTop:8,color:"#aaa",fontSize:"0.78rem"}}>Selected: {MARKERS_BY_ID[marker2]?.emoji} {MARKERS_BY_ID[marker2]?.name}</div>}
-                {conflict&&<div className="slide-in" style={{marginTop:8,color:"#f43f5e",fontWeight:700,fontSize:"0.82rem"}}>⚠️ That marker is taken by {name1||"Player 1"}! Pick another.</div>}
-                <Btn onClick={confirmP2} disabled={!name2.trim()||!marker2} color="linear-gradient(135deg,#0891b2,#06b6d4)" style={{marginTop:14,width:"100%"}}>Confirm →</Btn>
-              </>
-            )}
-          </div>
-        )}
-
-        {step===3&&(
-          <div className="slide-in" style={{textAlign:"center"}}>
-            <div style={{fontSize:"3rem",marginBottom:12}}>⚔️</div>
-            <div style={{display:"flex",justifyContent:"center",gap:32,marginBottom:20}}>
-              <div style={{textAlign:"center"}}>
-                <div style={{fontSize:"2.5rem"}}>{MARKERS_BY_ID[marker1]?.emoji||"✕"}</div>
-                <div style={{color:"#ff4d6d",fontWeight:800,fontSize:"0.9rem",marginTop:4}}>{name1||username1}</div>
-                <RarityTag rarity={MARKERS_BY_ID[marker1]?.rarity||"common"}/>
-              </div>
-              <div style={{color:"#555",fontWeight:900,fontSize:"1.5rem",alignSelf:"center"}}>VS</div>
-              <div style={{textAlign:"center"}}>
-                <div style={{fontSize:"2.5rem"}}>{MARKERS_BY_ID[marker2]?.emoji||"○"}</div>
-                <div style={{color:"#4cc9f0",fontWeight:800,fontSize:"0.9rem",marginTop:4}}>{vsBot?"Bot":(name2||"Player 2")}</div>
-                <RarityTag rarity={MARKERS_BY_ID[marker2]?.rarity||"common"}/>
-              </div>
-            </div>
-            <Btn onClick={launch} color="linear-gradient(135deg,#7c3aed,#4f46e5)" style={{width:"100%",fontSize:"1.1rem",padding:"14px"}}>🎮 LET'S PLAY!</Btn>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   GAME COMPONENTS (NxN, Archery, 3D, Custom)
-══════════════════════════════════════════════════════════ */
-function NxNGame({size,winLen,title,icon,onBack,vsBot,difficulty,onGameEnd,names,markerSyms}){
-  const[board,setBoard]=useState(Array(size*size).fill(0));
-  const[turn,setTurn]=useState(1);
-  const[winner,setWinner]=useState(0);
-  const[draw,setDraw]=useState(false);
-  const[newCells,setNewCells]=useState(new Set());
-  const[botThinking,setBotThinking]=useState(false);
-  const[moveCount,setMoveCount]=useState(0);
-
-  const reset=()=>{setBoard(Array(size*size).fill(0));setTurn(1);setWinner(0);setDraw(false);setNewCells(new Set());setBotThinking(false);setMoveCount(0);};
-
-  const applyMove=(b,idx,forTurn)=>{
-    const nb=[...b];nb[idx]=forTurn;setBoard(nb);setNewCells(p=>new Set([...p,idx]));setMoveCount(c=>c+1);
-    const w=checkWin2D(nb,size,winLen);
-    if(w){setWinner(w);onGameEnd&&onGameEnd({winner:w,moves:moveCount+1,draw:false});return true;}
-    if(nb.every(v=>v)){setDraw(true);onGameEnd&&onGameEnd({winner:0,moves:moveCount+1,draw:true});return true;}
-    setTurn(t=>t===1?2:1);return false;
-  };
-  const humanClick=(i)=>{if(board[i]||winner||draw||botThinking||(vsBot&&turn===2))return;applyMove(board,i,turn);};
-  useEffect(()=>{
-    if(!vsBot||turn!==2||winner||draw)return;setBotThinking(true);
-    const t=setTimeout(()=>{const m=size===3?botMoveClassic([...board],difficulty):botMoveNxN([...board],size,winLen,difficulty);if(m>=0)applyMove(board,m,2);setBotThinking(false);},BOT_DELAY[difficulty]+Math.random()*200);
-    return()=>clearTimeout(t);
-  },[turn,winner,draw]);
-
-  const cellPx=size<=3?88:size<=5?64:size<=7?46:34;
-  const fSize=size<=3?"2.2rem":size<=5?"1.7rem":size<=7?"1.2rem":"1rem";
-  const gap=size<=3?8:size<=5?6:4;
-  const blockBot=vsBot&&turn===2;
-  const sym=(n)=>markerSyms?markerSyms[n-1]:PLAYERS[n].sym;
-
-  return(
-    <GameShell title={title} icon={icon} onBack={onBack} turn={turn} winner={winner} draw={draw} onRematch={reset} vsBot={vsBot} botThinking={botThinking} difficulty={difficulty} names={names} markers={markerSyms}>
-      <div style={{display:"flex",justifyContent:"center"}}>
-        <div style={{display:"grid",gridTemplateColumns:`repeat(${size},${cellPx}px)`,gap}}>
-          {board.map((v,i)=>{
-            const p=PLAYERS[v];
-            const isEmoji=v&&sym(v)&&sym(v).length>0&&![..."✕○"].includes(sym(v)[0]);
-            return(
-              <button key={i} onClick={()=>humanClick(i)} style={{width:cellPx,height:cellPx,borderRadius:size>7?6:12,
-                border:`2px solid ${v?p.border:"rgba(255,255,255,0.09)"}`,
-                background:v?p.bg:"rgba(255,255,255,0.03)",
-                color:v?p.color:"transparent",
-                fontSize:isEmoji?(size<=3?"2.6rem":size<=5?"1.9rem":size<=7?"1.35rem":"1.05rem"):fSize,
-                fontWeight:900,cursor:(!v&&!winner&&!draw&&!blockBot&&!botThinking)?"pointer":"default",
-                textShadow:isEmoji?"none":(v?`0 0 12px ${p.color}`:"none"),
-                filter:isEmoji&&v?`drop-shadow(0 0 6px ${p.color})`:"none",
-                animation:newCells.has(i)?"pop 0.25s ease-out":"none",transition:"all 0.12s",fontFamily:"inherit",
-                lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}
-                onMouseEnter={e=>{if(!v&&!winner&&!draw&&!blockBot&&!botThinking)e.currentTarget.style.background=PLAYERS[turn].bg;}}
-                onMouseLeave={e=>{if(!v)e.currentTarget.style.background="rgba(255,255,255,0.03)";}}>
-                {v?sym(v):""}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </GameShell>
-  );
-}
-
-function ArcheryGame({onBack,vsBot,difficulty,onGameEnd,names,markerSyms}){
-  const[board,setBoard]=useState(Array(9).fill(0));
-  const[turn,setTurn]=useState(1);
-  const[winner,setWinner]=useState(0);
-  const[draw,setDraw]=useState(false);
-  const[aimed,setAimed]=useState(null);
-  const[shooting,setShooting]=useState(false);
-  const[result,setResult]=useState(null);
-  const[newCells,setNewCells]=useState(new Set());
-  const[floatMsgs,setFloatMsgs]=useState([]);
-  const[missedCell,setMissedCell]=useState(null);
-  const[botThinking,setBotThinking]=useState(false);
-
-  const reset=()=>{setBoard(Array(9).fill(0));setTurn(1);setWinner(0);setDraw(false);setAimed(null);setShooting(false);setResult(null);setNewCells(new Set());setFloatMsgs([]);setMissedCell(null);setBotThinking(false);};
-  const sym=(n)=>markerSyms?markerSyms[n-1]:PLAYERS[n].sym;
-
-  const performShot=(targetCell,currentBoard,currentTurn)=>{
-    setShooting(true);setAimed(null);setResult(null);
-    const rng=Math.random();const nb=[...currentBoard];let msg,type;
-    if(rng<0.60){
-      if(nb[targetCell]===0){nb[targetCell]=currentTurn;type="hit";msg="🎯 DIRECT HIT!";setNewCells(p=>new Set([...p,targetCell]));}
-      else if(nb[targetCell]===currentTurn){type="miss";msg="💨 Hit your own piece!";}
-      else{nb[targetCell]=0;type="ricochet";msg="💥 RICOCHET! Knocked off!";}
-    }else if(rng<0.82){
-      type="miss";msg="🌬️ MISS! Wide shot!";
-      const nearby=[targetCell-1,targetCell+1,targetCell-3,targetCell+3].filter(x=>x>=0&&x<9);
-      if(nearby.length){const mc=nearby[Math.floor(Math.random()*nearby.length)];setMissedCell(mc);setTimeout(()=>setMissedCell(null),600);}
-    }else{
-      const opp=[0,1,2,3,4,5,6,7,8].filter(x=>nb[x]===(currentTurn===1?2:1));
-      if(opp.length){const t2=opp[Math.floor(Math.random()*opp.length)];nb[t2]=0;type="ricochet";msg="💥 WILD RICOCHET!";}
-      else{type="miss";msg="💨 Ricochet—nothing to hit!";}
-    }
-    setBoard(nb);setResult({type,msg});
-    const id=Date.now();setFloatMsgs(p=>[...p,{id,msg,type}]);setTimeout(()=>setFloatMsgs(p=>p.filter(m=>m.id!==id)),1200);
-    const w=checkWin2D(nb,3,3);
-    if(w){setWinner(w);setShooting(false);onGameEnd&&onGameEnd({winner:w,draw:false});return;}
-    if(nb.every(v=>v)){setDraw(true);setShooting(false);onGameEnd&&onGameEnd({winner:0,draw:true});return;}
-    setShooting(false);setTurn(t=>t===1?2:1);
-  };
-
-  const humanShoot=()=>{if(aimed===null||shooting||winner||draw)return;performShot(aimed,board,turn);};
-  useEffect(()=>{
-    if(!vsBot||turn!==2||winner||draw||shooting)return;setBotThinking(true);
-    const t1=setTimeout(()=>{const target=botPickArcheryTarget([...board],difficulty);setAimed(target);setBotThinking(false);
-      const t2=setTimeout(()=>{setAimed(null);performShot(target,board,2);},820);return()=>clearTimeout(t2);},BOT_DELAY[difficulty]+Math.random()*300);
-    return()=>clearTimeout(t1);
-  },[turn,winner,draw,shooting]);
-
-  const isHumanTurn=!vsBot||turn===1;
-  const rColor=result?.type==="hit"?"#4ade80":result?.type==="ricochet"?"#facc15":"#f87171";
-  return(
-    <GameShell title="Tic Tac Archery" icon="🏹" onBack={onBack} turn={turn} winner={winner} draw={draw} onRematch={reset} vsBot={vsBot} botThinking={botThinking} difficulty={difficulty} names={names} markers={markerSyms}
-      extraInfo="HIT (60%) places your piece • MISS (22%) does nothing • RICOCHET (18%) knocks a piece off!">
-      <div style={{textAlign:"center",marginBottom:14,minHeight:60}}>
-        <div style={{fontSize:"3rem",display:"inline-block",transition:"transform 0.3s",transform:shooting?"translateX(20px) scale(1.2)":"scale(1)"}}>{shooting?"🏹":aimed!==null?"🎯":botThinking?"🤔":"🧍"}</div>
-        <div style={{color:"#555",fontSize:"0.78rem",marginTop:4}}>{botThinking?"Bot choosing target...":shooting?"Arrow in flight...":aimed!==null?(isHumanTurn?`Aimed at cell ${aimed+1} — ready!`:`Bot aims at cell ${aimed+1}...`):(isHumanTurn?"Click a cell to aim":"")}</div>
-      </div>
-      <div style={{display:"flex",justifyContent:"center",marginBottom:14,position:"relative"}}>
-        <div style={{position:"absolute",top:-20,left:"50%",transform:"translateX(-50%)",zIndex:10,pointerEvents:"none",width:"100%"}}>
-          {floatMsgs.map(m=><div key={m.id} className="float-msg" style={{color:m.type==="hit"?"#4ade80":m.type==="ricochet"?"#facc15":"#f87171",textAlign:"center",width:"100%"}}>{m.msg}</div>)}
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,80px)",gap:8}}>
-          {board.map((v,i)=>{
-            const isAimed=aimed===i,isMissed=missedCell===i;const p=PLAYERS[v];
-            return(
-              <button key={i} onClick={()=>{if(!shooting&&!winner&&!draw&&isHumanTurn&&!botThinking)setAimed(i===aimed?null:i);}}
-                style={{width:80,height:80,borderRadius:16,border:isAimed?"3px solid #facc15":`2px solid ${v?p.border:"rgba(255,255,255,0.1)"}`,background:isAimed?"rgba(250,204,21,0.15)":v?p.bg:isMissed?"rgba(255,100,100,0.12)":"rgba(255,255,255,0.03)",color:v?p.color:isAimed?"#facc15":"#333",fontSize:(v&&sym(v)&&![..."✕○"].includes(sym(v)[0]))?"2.4rem":"2rem",fontWeight:900,cursor:(shooting||!isHumanTurn||botThinking)?"not-allowed":"pointer",transition:"all 0.13s",transform:isAimed?"scale(1.08)":isMissed?"scale(0.93)":"scale(1)",animation:isMissed?"shake 0.3s ease-in-out":"none",textShadow:(v&&sym(v)&&![..."✕○"].includes(sym(v)[0]))?"none":(v?`0 0 12px ${p.color}`:"none"),filter:(v&&sym(v)&&![..."✕○"].includes(sym(v)[0])&&v)?`drop-shadow(0 0 8px ${p.color})`:"none",fontFamily:"inherit",lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                {v?sym(v):isAimed?"🎯":""}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      {aimed!==null&&!shooting&&isHumanTurn&&!winner&&!draw&&(
-        <div style={{display:"flex",justifyContent:"center"}}>
-          <Btn onClick={humanShoot} color="linear-gradient(135deg,#ea580c,#dc2626)" style={{fontSize:"1.2rem",padding:"14px 40px",boxShadow:"0 4px 20px rgba(220,38,38,0.4)"}}>🏹 SHOOT!</Btn>
-        </div>
-      )}
-      {result&&<div style={{marginTop:12,padding:"10px 20px",borderRadius:12,textAlign:"center",background:`${rColor}22`,border:`1.5px solid ${rColor}77`,color:rColor,fontWeight:800,fontSize:"0.95rem"}}>{result.msg}</div>}
-    </GameShell>
-  );
-}
-
-function Game3D({onBack,vsBot,difficulty,onGameEnd,names,markerSyms}){
-  const[board,setBoard]=useState(Array(27).fill(0));
-  const[turn,setTurn]=useState(1);
-  const[winner,setWinner]=useState(0);
-  const[draw,setDraw]=useState(false);
-  const[newCells,setNewCells]=useState(new Set());
-  const[botThinking,setBotThinking]=useState(false);
-  const reset=()=>{setBoard(Array(27).fill(0));setTurn(1);setWinner(0);setDraw(false);setNewCells(new Set());setBotThinking(false);};
-  const sym=(n)=>markerSyms?markerSyms[n-1]:PLAYERS[n].sym;
-  const applyMove=(b,idx,forTurn)=>{const nb=[...b];nb[idx]=forTurn;setBoard(nb);setNewCells(p=>new Set([...p,idx]));const w=check3DWin(nb);if(w){setWinner(w);onGameEnd&&onGameEnd({winner:w,draw:false});return true;}if(nb.every(v=>v)){setDraw(true);onGameEnd&&onGameEnd({winner:0,draw:true});return true;}setTurn(t=>t===1?2:1);return false;};
-  const humanClick=(l,r,c)=>{const i=l*9+r*3+c;if(board[i]||winner||draw||botThinking||(vsBot&&turn===2))return;applyMove(board,i,turn);};
-  useEffect(()=>{if(!vsBot||turn!==2||winner||draw)return;setBotThinking(true);const t=setTimeout(()=>{const m=botMove3D([...board],difficulty);if(m>=0)applyMove(board,m,2);setBotThinking(false);},BOT_DELAY[difficulty]+Math.random()*280);return()=>clearTimeout(t);},[turn,winner,draw]);
-  const lC=["#a855f7","#06b6d4","#22c55e"],lN=["Layer 1","Layer 2","Layer 3"];
-  return(
-    <GameShell title="3D Tic Tac Toe" icon="🎲" onBack={onBack} turn={turn} winner={winner} draw={draw} onRematch={reset} vsBot={vsBot} botThinking={botThinking} difficulty={difficulty} names={names} markers={markerSyms}
-      extraInfo="Win in any row, column, diagonal — or through all 3 layers. 49 winning lines!">
-      <div style={{display:"flex",gap:14,justifyContent:"center",flexWrap:"wrap"}}>
-        {[0,1,2].map(l=>(
-          <div key={l} style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
-            <div style={{background:`${lC[l]}22`,border:`1.5px solid ${lC[l]}55`,borderRadius:10,padding:"4px 12px",color:lC[l],fontSize:"0.7rem",fontWeight:700,marginBottom:8}}>{lN[l]}</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,64px)",gap:7}}>
-              {[0,1,2].map(r=>[0,1,2].map(c=>{const i=l*9+r*3+c;const v=board[i];const p=PLAYERS[v];
-                const is3DEmoji=v&&sym(v)&&![..."✕○"].includes(sym(v)[0]);
-                return(
-                  <button key={`${l}${r}${c}`} onClick={()=>humanClick(l,r,c)} style={{width:64,height:64,borderRadius:14,
-                    border:`2px solid ${v?p.border:`${lC[l]}33`}`,background:v?p.bg:`${lC[l]}08`,
-                    color:v?p.color:"transparent",
-                    fontSize:is3DEmoji?"2rem":"1.7rem",
-                    fontWeight:900,cursor:(!v&&!winner&&!draw&&!(vsBot&&turn===2)&&!botThinking)?"pointer":"default",
-                    animation:newCells.has(i)?"pop 0.25s ease-out":"none",transition:"all 0.12s",
-                    textShadow:is3DEmoji?"none":(v?`0 0 12px ${p.color}`:"none"),
-                    filter:is3DEmoji&&v?`drop-shadow(0 0 6px ${p.color})`:"none",
-                    fontFamily:"inherit",lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}
-                    onMouseEnter={e=>{if(!v&&!winner&&!draw&&!(vsBot&&turn===2)&&!botThinking)e.currentTarget.style.background=`${lC[l]}22`;}}
-                    onMouseLeave={e=>{if(!v)e.currentTarget.style.background=`${lC[l]}08`;}}>
-                    {v?sym(v):""}
-                  </button>
-                );
-              }))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </GameShell>
-  );
-}
-
-const GRID=7;
-const PRESETS={
-  "Plus":[[0,3],[1,3],[2,2],[2,3],[2,4],[3,1],[3,2],[3,3],[3,4],[3,5],[4,2],[4,3],[4,4],[5,3],[6,3]],
-  "Ring":[[0,2],[0,3],[0,4],[1,1],[1,5],[2,1],[2,5],[3,1],[3,5],[4,1],[4,5],[5,1],[5,5],[6,2],[6,3],[6,4]],
-  "Diamond":[[0,3],[1,2],[1,4],[2,1],[2,3],[2,5],[3,0],[3,2],[3,4],[3,6],[4,1],[4,3],[4,5],[5,2],[5,4],[6,3]],
-  "X Shape":[[0,0],[0,6],[1,1],[1,5],[2,2],[2,4],[3,3],[4,2],[4,4],[5,1],[5,5],[6,0],[6,6]],
-  "Heart":[[1,1],[1,5],[0,2],[0,3],[0,4],[1,2],[1,4],[2,1],[2,3],[2,5],[3,2],[3,4],[4,3],[5,3],[3,3]],
-};
-
-function CustomGame({onBack,vsBot,difficulty,onGameEnd,names,markerSyms}){
-  const[phase,setPhase]=useState("design");
-  const[activeCells,setActiveCells]=useState(new Set());
-  const[winLen,setWinLen]=useState(3);
-  const[board,setBoard]=useState({});
-  const[turn,setTurn]=useState(1);
-  const[winner,setWinner]=useState(0);
-  const[draw,setDraw]=useState(false);
-  const[isDrawing,setIsDrawing]=useState(false);
-  const[drawMode,setDrawMode]=useState(null);
-  const[botThinking,setBotThinking]=useState(false);
-  const sym=(n)=>markerSyms?markerSyms[n-1]:PLAYERS[n].sym;
-  const toggleCell=(r,c,mode)=>{const k=`${r},${c}`;setActiveCells(p=>{const s=new Set(p);mode==="add"?s.add(k):s.delete(k);return s;});};
-  const applyMove=(pl,key,forTurn)=>{const nb={...pl,[key]:forTurn};setBoard(nb);const w=checkWinCustom(nb,winLen);if(w){setWinner(w);onGameEnd&&onGameEnd({winner:w,draw:false});return true;}if([...activeCells].every(k=>nb[k])){setDraw(true);onGameEnd&&onGameEnd({winner:0,draw:true});return true;}setTurn(t=>t===1?2:1);return false;};
-  const humanClick=(r,c)=>{const k=`${r},${c}`;if(!activeCells.has(k)||board[k]||winner||draw||botThinking||(vsBot&&turn===2))return;applyMove(board,k,turn);};
-  useEffect(()=>{if(phase!=="play"||!vsBot||turn!==2||winner||draw)return;setBotThinking(true);const t=setTimeout(()=>{const m=botMoveCustom(board,activeCells,winLen,difficulty);if(m)applyMove(board,m,2);setBotThinking(false);},BOT_DELAY[difficulty]+Math.random()*220);return()=>clearTimeout(t);},[turn,winner,draw,phase]);
-  const rematch=()=>{setBoard({});setTurn(1);setWinner(0);setDraw(false);setBotThinking(false);};
-
-  if(phase==="design")return(
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a0a0f,#0d0d1a,#0a0f1a)",padding:16,display:"flex",flexDirection:"column",alignItems:"center"}}>
-      <div style={{width:"100%",maxWidth:520}}>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:18}}>
-          <Btn small onClick={onBack}>← Menu</Btn>
-          <h2 className="game-title" style={{color:"#fff",margin:0,fontSize:"1.3rem",flex:1}}>✏️ Custom Shape</h2>
-        </div>
-        <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:16,padding:"12px 14px",marginBottom:12}}>
-          <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:8}}>PRESETS:</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-            {Object.keys(PRESETS).map(name=><Btn key={name} small onClick={()=>setActiveCells(new Set(PRESETS[name].map(([r,c])=>`${r},${c}`)))}>{name}</Btn>)}
-            <Btn small onClick={()=>setActiveCells(new Set())} style={{color:"#fca5a5"}}>Clear</Btn>
-          </div>
-        </div>
-        <div style={{color:"#555",fontSize:"0.72rem",textAlign:"center",marginBottom:10}}>🖱️ Drag to draw • {activeCells.size} cells</div>
-        <div style={{display:"flex",justifyContent:"center",marginBottom:12,userSelect:"none"}}>
-          <div style={{display:"grid",gridTemplateColumns:`repeat(${GRID},44px)`,gap:4}} onMouseLeave={()=>{setIsDrawing(false);setDrawMode(null);}}>
-            {Array(GRID*GRID).fill(0).map((_,i)=>{const r=Math.floor(i/GRID),c=i%GRID,k=`${r},${c}`,active=activeCells.has(k);
-              return<div key={i} onMouseDown={()=>{setIsDrawing(true);const m=active?"remove":"add";setDrawMode(m);toggleCell(r,c,m);}} onMouseEnter={()=>{if(isDrawing&&drawMode)toggleCell(r,c,drawMode);}} onMouseUp={()=>{setIsDrawing(false);setDrawMode(null);}}
-                style={{width:44,height:44,borderRadius:9,cursor:"pointer",border:`2px solid ${active?"#14b8a6":"rgba(255,255,255,0.07)"}`,background:active?"rgba(20,184,166,0.24)":"rgba(255,255,255,0.02)",display:"flex",alignItems:"center",justifyContent:"center",color:"#14b8a6",fontSize:"0.9rem",transition:"all 0.1s"}}>
-                {active?"✓":""}
-              </div>;
-            })}
-          </div>
-        </div>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:12,marginBottom:16}}>
-          <span style={{color:"#777",fontSize:"0.85rem",fontWeight:700}}>Win length:</span>
-          <div style={{display:"flex",gap:6}}>{[2,3,4,5,6].map(n=><Btn key={n} small onClick={()=>setWinLen(n)} color={winLen===n?"#14b8a6":undefined}>{n}</Btn>)}</div>
-        </div>
-        <Btn onClick={()=>activeCells.size>=3&&setPhase("play")} disabled={activeCells.size<3} color={activeCells.size>=3?"linear-gradient(135deg,#0d9488,#14b8a6)":undefined} style={{width:"100%"}}>
-          {activeCells.size<3?"Draw at least 3 cells":`▶ Play! (${activeCells.size} cells, get ${winLen} in a row)`}
-        </Btn>
-      </div>
-    </div>
-  );
-
-  return(
-    <GameShell title="Custom Shape" icon="✏️" onBack={()=>setPhase("design")} turn={turn} winner={winner} draw={draw} onRematch={rematch} vsBot={vsBot} botThinking={botThinking} difficulty={difficulty} names={names} markers={markerSyms}>
-      <div style={{display:"flex",justifyContent:"center"}}>
-        <div style={{display:"grid",gridTemplateColumns:`repeat(${GRID},44px)`,gap:4}}>
-          {Array(GRID*GRID).fill(0).map((_,i)=>{const r=Math.floor(i/GRID),c=i%GRID,k=`${r},${c}`;
-            if(!activeCells.has(k))return<div key={i} style={{width:44,height:44}}/>;
-            const v=board[k]||0;const p=PLAYERS[v];
-            return(
-              <button key={i} onClick={()=>humanClick(r,c)} style={{width:44,height:44,borderRadius:9,border:`2px solid ${v?p.border:"rgba(20,184,166,0.28)"}`,background:v?p.bg:"rgba(20,184,166,0.05)",color:v?p.color:"transparent",fontSize:(v&&sym(v)&&![..."✕○"].includes(sym(v)[0]))?"1.6rem":"1.3rem",fontWeight:900,cursor:(!v&&!winner&&!draw&&!(vsBot&&turn===2)&&!botThinking)?"pointer":"default",textShadow:(v&&sym(v)&&![..."✕○"].includes(sym(v)[0]))?"none":(v?`0 0 10px ${p.color}`:"none"),filter:(v&&sym(v)&&![..."✕○"].includes(sym(v)[0])&&v)?`drop-shadow(0 0 6px ${p.color})`:"none",transition:"all 0.12s",fontFamily:"inherit",lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}
-                onMouseEnter={e=>{if(!v&&!winner&&!draw&&!(vsBot&&turn===2)&&!botThinking)e.currentTarget.style.background=PLAYERS[turn].bg;}}
-                onMouseLeave={e=>{if(!v)e.currentTarget.style.background="rgba(20,184,166,0.05)";}}>
-                {v?sym(v):""}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    </GameShell>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   XTRA FUN — RECORDS SCREEN
-══════════════════════════════════════════════════════════ */
-function RecordsScreen({xtraData,username}){
-  const r=xtraData?.records||{};
-  const unlocked=(xtraData?.records?.achievements)||[];
-  const stats=[
-    {label:"Total Games",val:r.totalGames||0,icon:"🎮"},
-    {label:"Total Wins",val:r.totalWins||0,icon:"🏆"},
-    {label:"Bot Wins",val:r.botWins||0,icon:"🤖"},
-    {label:"Xtra Hard Wins",val:r.xhardWins||0,icon:"💀"},
-    {label:"Best Win Streak",val:r.bestStreak||0,icon:"🔥"},
-    {label:"Current Streak",val:r.currentStreak||0,icon:"⚡"},
-    {label:"Archery Wins",val:r.archeryWins||0,icon:"🏹"},
-    {label:"3D Wins",val:r.threeDWins||0,icon:"🎲"},
-    {label:"10-in-a-Row Wins",val:r.tenWins||0,icon:"🔟"},
-    {label:"Custom Wins",val:r.customWins||0,icon:"✏️"},
-    {label:"Tournament Wins",val:r.tournamentWins||0,icon:"🥇"},
-    {label:"Packs Opened",val:r.packsOpened||0,icon:"📦"},
-    {label:"Markers Gifted",val:r.gifted||0,icon:"🎁"},
-    {label:"Fastest Win (moves)",val:r.fastestMoves||"—",icon:"⚡"},
-  ];
-
-  return(
-    <div style={{color:"#fff"}}>
-      <h3 className="game-title" style={{color:"#facc15",margin:"0 0 16px",fontSize:"1.3rem"}}>📊 Your Records</h3>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:20}}>
-        {stats.map(s=>(
-          <div key={s.label} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"12px 14px"}}>
-            <div style={{fontSize:"1.3rem",marginBottom:4}}>{s.icon}</div>
-            <div style={{fontSize:"1.4rem",fontWeight:900,color:"#fff"}}>{s.val}</div>
-            <div style={{fontSize:"0.68rem",color:"#555",fontWeight:700}}>{s.label}</div>
-          </div>
-        ))}
-      </div>
-      <h3 className="game-title" style={{color:"#a855f7",margin:"0 0 12px",fontSize:"1.2rem"}}>🏅 Achievements</h3>
-      <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {ACHIEVEMENTS.map(a=>{
-          const done=unlocked.includes(a.id);
-          return(
-            <div key={a.id} style={{display:"flex",alignItems:"center",gap:12,background:done?"rgba(168,85,247,0.12)":"rgba(255,255,255,0.03)",border:`1px solid ${done?"rgba(168,85,247,0.35)":"rgba(255,255,255,0.07)"}`,borderRadius:14,padding:"10px 14px",opacity:done?1:0.55}}>
-              <div style={{fontSize:"1.5rem"}}>{a.icon}</div>
-              <div style={{flex:1}}>
-                <div style={{fontWeight:800,fontSize:"0.88rem",color:done?"#c4b5fd":"#aaa"}}>{a.name}</div>
-                <div style={{fontSize:"0.7rem",color:"#555"}}>{a.desc}</div>
-              </div>
-              {done?<span style={{color:"#4ade80",fontWeight:700,fontSize:"0.75rem"}}>✓ +{a.coins}🪙</span>:<span style={{color:"#555",fontSize:"0.72rem"}}>+{a.coins}🪙</span>}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   XTRA FUN — MARKERS SCREEN
-══════════════════════════════════════════════════════════ */
-function PackOpeningScreen({pack,onComplete}){
-  const[cards,setCards]=useState([]);
-  const[revealed,setRevealed]=useState([]);
-  const[done,setDone]=useState(false);
-
-  useEffect(()=>{
-    const rolled=rollPack(pack);setCards(rolled);
-    rolled.forEach((_,i)=>{setTimeout(()=>{setRevealed(p=>[...p,i]);},400+i*600);});
-    setTimeout(()=>setDone(true),400+rolled.length*600+400);
-  },[]);
-
-  return(
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a0a0f,#0d0d1a,#0a0f1a)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:16}}>
-      <h2 className="game-title" style={{color:"#fff",marginBottom:8,fontSize:"1.5rem"}}>{pack.icon} Opening {pack.name}!</h2>
-      <p style={{color:"#555",fontSize:"0.85rem",marginBottom:32}}>Your 5 cards are being revealed...</p>
-      <div style={{display:"flex",gap:14,flexWrap:"wrap",justifyContent:"center",marginBottom:32}}>
-        {Array(5).fill(0).map((_,i)=>{
-          const card=cards[i];const isRevealed=revealed.includes(i);const r=card?RARITY[card.rarity]:null;
-          return(
-            <div key={i} className={isRevealed?"card-flip":""} style={{width:90,height:120,borderRadius:16,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:isRevealed?(r?.bg||"rgba(255,255,255,0.05)"):"rgba(255,255,255,0.06)",border:`2px solid ${isRevealed?(r?.color||"#fff"):"rgba(255,255,255,0.15)"}`,transition:"all 0.3s",boxShadow:isRevealed?`0 0 20px ${r?.glow}`:"none",cursor:"default"}}>
-              {isRevealed&&card?(
-                <>
-                  <div style={{fontSize:"2.5rem",marginBottom:4}}>{card.emoji}</div>
-                  <div style={{fontSize:"0.6rem",fontWeight:700,color:r?.color,textAlign:"center",padding:"0 4px"}}>{card.name}</div>
-                  <div style={{marginTop:4}}><RarityTag rarity={card.rarity}/></div>
-                </>
-              ):(
-                <div style={{fontSize:"2rem"}}>❓</div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      {done&&(
-        <div className="slide-in">
-          <Btn onClick={()=>onComplete(cards)} color="linear-gradient(135deg,#7c3aed,#4f46e5)" style={{fontSize:"1rem",padding:"14px 32px"}}>
-            ✨ Collect Cards!
-          </Btn>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MarkersScreen({xtraData,onUpdateXtra,username}){
-  const[tab,setTab]=useState("collection");
-  const[openingPack,setOpeningPack]=useState(null);
-  const[filterRarity,setFilterRarity]=useState("all");
-  const[filterTheme,setFilterTheme]=useState("all");
-  const[giftMode,setGiftMode]=useState(false);
-  const[giftTarget,setGiftTarget]=useState("");
-  const[giftMarkerId,setGiftMarkerId]=useState(null);
-  const[giftMsg,setGiftMsg]=useState("");
-  const[giftLoading,setGiftLoading]=useState(false);
-
-  const owned=xtraData?.markers||[];
-  const coins=xtraData?.coins||0;
-
-  const themes=["all",...new Set(MARKERS.map(m=>m.theme))];
-  const rarities=["all","common","uncommon","rare","epic","legendary","mythic","amazing"];
-
-  const displayMarkers=MARKERS.filter(m=>{
-    const has=owned.includes(m.id);
-    if(filterRarity!=="all"&&m.rarity!==filterRarity)return false;
-    if(filterTheme!=="all"&&m.theme!==filterTheme)return false;
-    return true;
-  });
-
-  const buyPack=async(pack)=>{
-    if(coins<pack.cost)return;
-    setOpeningPack(pack);
-  };
-
-  const collectCards=async(cards)=>{
-    const newOwned=[...new Set([...owned,...cards.map(c=>c.id)])];
-    const bestPull=cards.reduce((best,c)=>{
-      const order=["common","uncommon","rare","epic","legendary","mythic","amazing"];
-      return order.indexOf(c.rarity)>order.indexOf(best)?c.rarity:best;
-    },"common");
-    const newData={
-      ...xtraData,
-      coins:coins-openingPack.cost,
-      markers:newOwned,
-      records:{
-        ...xtraData.records,
-        packsOpened:(xtraData.records?.packsOpened||0)+1,
-        markersOwned:newOwned.length,
-        bestPull:["legendary","mythic","amazing"].includes(bestPull)?bestPull:(xtraData.records?.bestPull||null),
-        hasAmazing:cards.some(c=>c.rarity==="amazing")||(xtraData.records?.hasAmazing||false),
-      }
-    };
-    const newAch=checkNewAchievements(newData.records,newData.records?.achievements||[]);
-    if(newAch.length){
-      newData.coins+=newAch.reduce((s,a)=>s+a.coins,0);
-      newData.records.achievements=[...(newData.records.achievements||[]),...newAch.map(a=>a.id)];
-    }
-    await saveXtraData(username,newData);
-    onUpdateXtra(newData);
-    setOpeningPack(null);
-  };
-
-  const sendGift=async()=>{
-    if(!giftTarget.trim()||!giftMarkerId)return;
-    setGiftLoading(true);
-    const targetKey=STOR_PREFIX+"xtra_"+giftTarget.toLowerCase().replace(/\s+/g,"_");
-    try{
-      let targetData;
-      try{const res=await window.storage.get(targetKey);targetData=JSON.parse(res.value);}
-      catch{setGiftMsg("❌ User not found!");setGiftLoading(false);return;}
-      const newTargetMarkers=[...new Set([...(targetData.markers||[]),giftMarkerId])];
-      await window.storage.set(targetKey,JSON.stringify({...targetData,markers:newTargetMarkers}));
-      const newOwned=owned.filter(id=>id!==giftMarkerId);
-      const newData={...xtraData,markers:newOwned,records:{...(xtraData.records||{}),gifted:(xtraData.records?.gifted||0)+1,markersOwned:newOwned.length}};
-      const newAch=checkNewAchievements(newData.records,newData.records?.achievements||[]);
-      if(newAch.length){newData.coins=(newData.coins||0)+newAch.reduce((s,a)=>s+a.coins,0);newData.records.achievements=[...(newData.records.achievements||[]),...newAch.map(a=>a.id)];}
-      await saveXtraData(username,newData);onUpdateXtra(newData);
-      setGiftMsg(`✅ ${MARKERS_BY_ID[giftMarkerId]?.emoji} ${MARKERS_BY_ID[giftMarkerId]?.name} gifted to ${giftTarget}!`);
-      setGiftMarkerId(null);setGiftTarget("");setGiftMode(false);
-    }catch{setGiftMsg("❌ Failed to gift. Try again.");}
-    setGiftLoading(false);
-  };
-
-  if(openingPack)return<PackOpeningScreen pack={openingPack} onComplete={collectCards}/>;
-
-  return(
-    <div style={{color:"#fff"}}>
-      {/* Coins + tabs */}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-        <div style={{background:"rgba(251,191,36,0.15)",border:"1px solid rgba(251,191,36,0.4)",borderRadius:12,padding:"6px 14px",color:"#fbbf24",fontWeight:800,fontSize:"0.9rem"}}>🪙 {coins.toLocaleString()} coins</div>
-        <div style={{display:"flex",gap:6}}>
-          {["collection","packs","gift"].map(t=><Btn key={t} small onClick={()=>setTab(t)} color={tab===t?"#7c3aed":undefined}>{t==="collection"?"🗃️ Collection":t==="packs"?"📦 Packs":"🎁 Gift"}</Btn>)}
-        </div>
-      </div>
-
-      {tab==="collection"&&(
-        <>
-          <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
-            <select value={filterRarity} onChange={e=>setFilterRarity(e.target.value)} style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:10,padding:"5px 10px",color:"#ccc",fontFamily:"inherit",fontSize:"0.78rem"}}>
-              {rarities.map(r=><option key={r} value={r}>{r==="all"?"All Rarities":RARITY[r]?.label||r}</option>)}
-            </select>
-            <select value={filterTheme} onChange={e=>setFilterTheme(e.target.value)} style={{background:"rgba(255,255,255,0.07)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:10,padding:"5px 10px",color:"#ccc",fontFamily:"inherit",fontSize:"0.78rem"}}>
-              {themes.map(t=><option key={t} value={t}>{t==="all"?"All Themes":t}</option>)}
-            </select>
-            <span style={{color:"#555",fontSize:"0.75rem",alignSelf:"center"}}>{owned.length}/300 owned</span>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(68px,1fr))",gap:8}}>
-            {displayMarkers.map(m=>{
-              const has=owned.includes(m.id);const r=RARITY[m.rarity];
-              return(
-                <div key={m.id} title={`${m.name} (${r.label}) — ${m.theme}`} style={{background:has?r.bg:"rgba(255,255,255,0.02)",border:`1.5px solid ${has?r.color+"55":"rgba(255,255,255,0.07)"}`,borderRadius:12,padding:8,textAlign:"center",opacity:has?1:0.3,cursor:"default",position:"relative",boxShadow:has?`0 0 10px ${r.glow}`:"none",transition:"all 0.2s"}}>
-                  <div style={{fontSize:"1.6rem"}}>{m.emoji}</div>
-                  <div style={{fontSize:"0.55rem",color:has?r.color:"#444",fontWeight:700,marginTop:2,lineHeight:1.2}}>{m.name}</div>
-                  {has&&<div style={{position:"absolute",top:3,right:4,width:7,height:7,borderRadius:"50%",background:r.color,boxShadow:`0 0 6px ${r.glow}`}}/>}
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {tab==="packs"&&(
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          {PACKS.map(p=>{
-            const canBuy=coins>=p.cost;
-            return(
-              <div key={p.id} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:16,padding:"14px 16px",display:"flex",alignItems:"center",gap:14}}>
-                <div style={{fontSize:"2.5rem"}}>{p.icon}</div>
-                <div style={{flex:1}}>
-                  <div style={{fontWeight:800,fontSize:"0.95rem"}}>{p.name}</div>
-                  <div style={{color:"#555",fontSize:"0.72rem",marginTop:2}}>{p.desc}</div>
-                  <div style={{marginTop:4,display:"flex",gap:4,flexWrap:"wrap"}}>
-                    {Object.entries(p.weights).filter(([,v])=>v>0).map(([k,v])=>(
-                      <span key={k} style={{fontSize:"0.58rem",color:RARITY[k]?.color,fontWeight:700,background:RARITY[k]?.bg,borderRadius:5,padding:"1px 5px"}}>{RARITY[k]?.label}: {v}%</span>
-                    ))}
+                {state === 'host' && hostStep === 2 && (
+                  <div className="space-y-4 fade-in-delay-2">
+                    <button onClick={() => { setHostStep(1); setMessage(''); }} className="text-blue-600 hover:underline">← Back</button>
+                    <div className="text-center mb-4">
+                      <h2 className="text-2xl font-bold text-gray-800">Host a Game</h2>
+                      <p className="text-gray-600 mt-1">Step 2: Enter your names</p>
+                      <div className="mt-2 text-sm text-gray-600">
+                        <p><span className="font-semibold text-blue-700">Mode:</span> {gameMode.charAt(0).toUpperCase() + gameMode.slice(1)}</p>
+                        {theme && <p><span className="font-semibold text-blue-700">Theme:</span> {theme}</p>}
+                      </div>
+                    </div>
+                    <input placeholder="Your real name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full p-3 border-2 rounded-lg" />
+                    <input 
+                      placeholder="Your username" 
+                      value={username} 
+                      onChange={(e) => setUsername(e.target.value)} 
+                      onKeyPress={(e) => e.key === 'Enter' && createGame()}
+                      className="w-full p-3 border-2 rounded-lg" 
+                    />
+                    <button onClick={createGame} className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white p-4 rounded-lg font-bold">Create Game</button>
+                    {message && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center gap-2 fade-in"><AlertCircle className="w-5 h-5" />{message}</div>}
                   </div>
-                </div>
-                <Btn small onClick={()=>buyPack(p)} disabled={!canBuy} color={canBuy?"linear-gradient(135deg,#7c3aed,#4f46e5)":undefined} style={{flexShrink:0}}>
-                  🪙{p.cost}
-                </Btn>
-              </div>
-            );
-          })}
-        </div>
-      )}
+                )}
 
-      {tab==="gift"&&(
-        <div>
-          <p style={{color:"#666",fontSize:"0.83rem",marginBottom:16}}>Gift a marker from your collection to another player. It will be removed from your collection!</p>
-          <div style={{marginBottom:12}}>
-            <div style={{color:"#666",fontSize:"0.72rem",fontWeight:700,marginBottom:6,textTransform:"uppercase",letterSpacing:1}}>Recipient Username</div>
-            <input value={giftTarget} onChange={e=>setGiftTarget(e.target.value)} placeholder="Enter username..." style={{width:"100%",background:"rgba(255,255,255,0.07)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:12,padding:"10px 14px",color:"#fff",fontSize:"0.9rem",fontFamily:"inherit",outline:"none"}}/>
-          </div>
-          <div style={{color:"#666",fontSize:"0.72rem",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Select Marker to Gift</div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14,maxHeight:200,overflowY:"auto"}}>
-            {MARKERS.filter(m=>owned.includes(m.id)).map(m=><MarkerBadge key={m.id} marker={m} size={44} selected={giftMarkerId===m.id} onClick={()=>setGiftMarkerId(m.id===giftMarkerId?null:m.id)}/>)}
-          </div>
-          {giftMarkerId&&<div style={{color:"#aaa",fontSize:"0.8rem",marginBottom:10}}>Gifting: {MARKERS_BY_ID[giftMarkerId]?.emoji} {MARKERS_BY_ID[giftMarkerId]?.name}</div>}
-          {giftMsg&&<div style={{color:giftMsg.startsWith("✅")?"#4ade80":"#f43f5e",fontWeight:700,fontSize:"0.82rem",marginBottom:10}}>{giftMsg}</div>}
-          <Btn onClick={sendGift} disabled={!giftTarget.trim()||!giftMarkerId||giftLoading} color="linear-gradient(135deg,#059669,#10b981)" style={{width:"100%"}}>
-            {giftLoading?"Sending...":"🎁 Send Gift"}
-          </Btn>
-        </div>
-      )}
-    </div>
-  );
-}
+                {state === 'join' && joinStep === 1 && (
+                  <div className="space-y-4 fade-in-delay-2">
+                    <button onClick={() => setState('home')} className="text-blue-600 hover:underline">← Back</button>
+                    <div className="text-center mb-4">
+                      <h2 className="text-2xl font-bold text-gray-800">Join a Game</h2>
+                      <p className="text-gray-600 mt-1">Step 1: Enter the game code</p>
+                    </div>
+                    <input 
+                      placeholder="Game Code" 
+                      value={gameCode} 
+                      onChange={(e) => setGameCode(e.target.value.toUpperCase())} 
+                      onKeyPress={(e) => e.key === 'Enter' && verifyGameCode()}
+                      className="w-full p-3 border-2 rounded-lg text-center text-2xl font-bold" 
+                      maxLength={4} 
+                    />
+                    <button onClick={verifyGameCode} className="w-full bg-gradient-to-r from-purple-500 to-purple-700 text-white p-4 rounded-lg font-bold">Next</button>
+                    {message && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center gap-2 fade-in"><AlertCircle className="w-5 h-5" />{message}</div>}
+                  </div>
+                )}
 
-/* ══════════════════════════════════════════════════════════
-   XTRA FUN — TOURNAMENT SYSTEM
-══════════════════════════════════════════════════════════ */
-const GAME_MODES_INFO=[
-  {id:"classic",label:"Classic",icon:"⬜"},{id:"archery",label:"Archery",icon:"🏹"},
-  {id:"3d",label:"3D",icon:"🎲"},{id:"five",label:"5-in-a-Row",icon:"5️⃣"},
-  {id:"ten",label:"10-in-a-Row",icon:"🔟"},
-];
+                {state === 'join' && joinStep === 2 && (
+                  <div className="space-y-4 fade-in-delay-2">
+                    <button onClick={() => { setJoinStep(1); setMessage(''); }} className="text-blue-600 hover:underline">← Back</button>
+                    <div className="text-center mb-4">
+                      <h2 className="text-2xl font-bold text-gray-800">Join a Game</h2>
+                      <p className="text-gray-600 mt-1">Step 2: Enter your names</p>
+                      <p className="text-sm text-purple-700 font-semibold mt-2">Game Code: {gameCode}</p>
+                    </div>
+                    <input placeholder="Your real name" value={playerName} onChange={(e) => setPlayerName(e.target.value)} className="w-full p-3 border-2 rounded-lg" />
+                    <input 
+                      placeholder="Your username" 
+                      value={username} 
+                      onChange={(e) => setUsername(e.target.value)} 
+                      onKeyPress={(e) => e.key === 'Enter' && joinGame()}
+                      className="w-full p-3 border-2 rounded-lg" 
+                    />
+                    <button onClick={joinGame} className="w-full bg-gradient-to-r from-purple-500 to-purple-700 text-white p-4 rounded-lg font-bold">Join Game</button>
+                    {message && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center gap-2 fade-in"><AlertCircle className="w-5 h-5" />{message}</div>}
+                  </div>
+                )}
 
-function buildBracket(players){
-  // Single elimination bracket
-  let n=1;while(n<players.length)n*=2;
-  const seeded=[...players];while(seeded.length<n)seeded.push(null);
-  // Shuffle
-  for(let i=seeded.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[seeded[i],seeded[j]]=[seeded[j],seeded[i]];}
-  const rounds=[];let current=seeded;
-  while(current.length>1){
-    const matches=[];
-    for(let i=0;i<current.length;i+=2)matches.push({p1:current[i],p2:current[i+1],winner:null});
-    rounds.push(matches);
-    current=matches.map(m=>m.winner);
-  }
-  return rounds;
-}
-
-function buildRoundRobin(players){
-  const matches=[];
-  for(let i=0;i<players.length;i++)for(let j=i+1;j<players.length;j++)matches.push({p1:players[i],p2:players[j],winner:null,played:false});
-  return matches;
-}
-
-function TournamentScreen({xtraData,onUpdateXtra,username,onPlayGame}){
-  const[view,setView]=useState("hub"); // hub|create|join|bracket|roundrobin|active
-  const[tourney,setTourney]=useState(null);
-  const[joinCode,setJoinCode]=useState("");
-  const[joinErr,setJoinErr]=useState("");
-  const[loading,setLoading]=useState(false);
-
-  // Create tournament
-  const[tName,setTName]=useState("");
-  const[tType,setTType]=useState("bracket");
-  const[tMode,setTMode]=useState("classic");
-  const[tPlayers,setTPlayers]=useState([username]);
-  const[tNewPlayer,setTNewPlayer]=useState("");
-
-  const createTournament=async()=>{
-    const code=Math.random().toString(36).substring(2,8).toUpperCase();
-    const t={code,name:tName||`${username}'s Tournament`,type:tType,mode:tMode,host:username,players:[...tPlayers],status:"active",createdAt:Date.now()};
-    if(tType==="bracket")t.rounds=buildBracket(t.players);
-    else t.matches=buildRoundRobin(t.players);
-    await saveTournament(code,t);
-    setTourney(t);setView(tType==="bracket"?"bracket":"roundrobin");
-  };
-
-  const joinTournament=async()=>{
-    if(!joinCode.trim()){setJoinErr("Enter a code!");return;}
-    setLoading(true);
-    const t=await loadTournament(joinCode.trim().toUpperCase());
-    if(!t){setJoinErr("Tournament not found!");setLoading(false);return;}
-    setTourney(t);setView(t.type==="bracket"?"bracket":"roundrobin");setJoinErr("");
-    setLoading(false);
-  };
-
-  const setMatchWinner=async(roundIdx,matchIdx,winnerName)=>{
-    const t={...tourney};
-    if(t.type==="bracket"){
-      t.rounds[roundIdx][matchIdx].winner=winnerName;
-      if(roundIdx+1<t.rounds.length)t.rounds[roundIdx+1][Math.floor(matchIdx/2)][matchIdx%2===0?"p1":"p2"]=winnerName;
-    }else{
-      const mi=t.matches.findIndex(m=>t.matches.indexOf(m)===matchIdx);
-      if(mi>=0){t.matches[mi].winner=winnerName;t.matches[mi].played=true;}
-    }
-    await saveTournament(t.code,t);setTourney({...t});
-    // Check if winner is local user and award coins
-    if(winnerName===username){
-      const newData={...xtraData,coins:(xtraData?.coins||0)+COIN_REWARDS.tournament_match,records:{...(xtraData?.records||{}),tournamentWins:(xtraData?.records?.tournamentWins||0)+1}};
-      const newAch=checkNewAchievements(newData.records,newData.records?.achievements||[]);
-      if(newAch.length){newData.coins+=newAch.reduce((s,a)=>s+a.coins,0);newData.records.achievements=[...(newData.records.achievements||[]),...newAch.map(a=>a.id)];}
-      await saveXtraData(username,newData);onUpdateXtra(newData);
-    }
-  };
-
-  // Calculate round-robin standings
-  const getRRStandings=()=>{
-    if(!tourney||tourney.type!=="roundrobin")return[];
-    const pts={};tourney.players.forEach(p=>pts[p]=0);
-    tourney.matches.filter(m=>m.winner).forEach(m=>pts[m.winner]=(pts[m.winner]||0)+1);
-    return Object.entries(pts).sort(([,a],[,b])=>b-a);
-  };
-
-  if(view==="hub")return(
-    <div style={{color:"#fff"}}>
-      <h3 className="game-title" style={{color:"#f97316",margin:"0 0 16px",fontSize:"1.3rem"}}>🏟️ Tournament Hub</h3>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:20}}>
-        {[{icon:"➕",label:"Create Tournament",sub:"Host your own bracket",action:()=>setView("create"),color:"#7c3aed"},
-          {icon:"🔑",label:"Join by Code",sub:"Enter a friend's code",action:()=>setView("join"),color:"#0891b2"}].map(b=>(
-          <button key={b.label} onClick={b.action} style={{background:`${b.color}22`,border:`1.5px solid ${b.color}55`,borderRadius:16,padding:20,cursor:"pointer",fontFamily:"inherit",color:"#fff",textAlign:"left",transition:"all 0.2s"}}
-            onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"} onMouseLeave={e=>e.currentTarget.style.transform="none"}>
-            <div style={{fontSize:"2rem",marginBottom:6}}>{b.icon}</div>
-            <div style={{fontWeight:800,fontSize:"0.9rem"}}>{b.label}</div>
-            <div style={{color:"#666",fontSize:"0.7rem",marginTop:3}}>{b.sub}</div>
-          </button>
-        ))}
-      </div>
-      <div style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:14,padding:"12px 14px",color:"#555",fontSize:"0.78rem",lineHeight:1.6}}>
-        <div style={{color:"#aaa",fontWeight:700,marginBottom:6}}>📖 How it works</div>
-        <div>Create a tournament and choose Bracket or Round Robin. Add players (anyone in the room), pick a game mode, and play each match on this device. Results are tracked automatically and synced with a shareable code. Win coins for each victory! 🪙</div>
-      </div>
-    </div>
-  );
-
-  if(view==="create")return(
-    <div style={{color:"#fff"}}>
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-        <Btn small onClick={()=>setView("hub")}>← Back</Btn>
-        <h3 className="game-title" style={{color:"#f97316",margin:0,fontSize:"1.2rem"}}>➕ Create Tournament</h3>
-      </div>
-      <div style={{marginBottom:12}}>
-        <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:1}}>Tournament Name</div>
-        <input value={tName} onChange={e=>setTName(e.target.value)} placeholder={`${username}'s Tournament`} style={{width:"100%",background:"rgba(255,255,255,0.07)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:12,padding:"10px 14px",color:"#fff",fontSize:"0.9rem",fontFamily:"inherit",outline:"none"}}/>
-      </div>
-      <div style={{marginBottom:12}}>
-        <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:1}}>Format</div>
-        <div style={{display:"flex",gap:8}}>
-          {["bracket","roundrobin"].map(t=><button key={t} onClick={()=>setTType(t)} style={{flex:1,background:tType===t?"rgba(249,115,22,0.25)":"rgba(255,255,255,0.05)",border:`1.5px solid ${tType===t?"#f97316":"rgba(255,255,255,0.1)"}`,borderRadius:12,padding:"10px",cursor:"pointer",fontFamily:"inherit",color:tType===t?"#fb923c":"#888",fontWeight:700,fontSize:"0.83rem"}}>{t==="bracket"?"🏆 Bracket":"🔄 Round Robin"}</button>)}
-        </div>
-      </div>
-      <div style={{marginBottom:12}}>
-        <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:1}}>Game Mode</div>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          {GAME_MODES_INFO.map(m=><button key={m.id} onClick={()=>setTMode(m.id)} style={{background:tMode===m.id?"rgba(249,115,22,0.25)":"rgba(255,255,255,0.05)",border:`1.5px solid ${tMode===m.id?"#f97316":"rgba(255,255,255,0.1)"}`,borderRadius:10,padding:"6px 12px",cursor:"pointer",fontFamily:"inherit",color:tMode===m.id?"#fb923c":"#888",fontSize:"0.78rem",fontWeight:700}}>{m.icon} {m.label}</button>)}
-        </div>
-      </div>
-      <div style={{marginBottom:14}}>
-        <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:5,textTransform:"uppercase",letterSpacing:1}}>Players ({tPlayers.length})</div>
-        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
-          {tPlayers.map(p=>(
-            <div key={p} style={{background:"rgba(249,115,22,0.15)",border:"1px solid rgba(249,115,22,0.3)",borderRadius:8,padding:"3px 10px",color:"#fb923c",fontWeight:700,fontSize:"0.78rem",display:"flex",gap:6,alignItems:"center"}}>
-              {p}{p!==username&&<span onClick={()=>setTPlayers(prev=>prev.filter(x=>x!==p))} style={{cursor:"pointer",color:"#f43f5e"}}>×</span>}
-            </div>
-          ))}
-        </div>
-        <div style={{display:"flex",gap:8}}>
-          <input value={tNewPlayer} onChange={e=>setTNewPlayer(e.target.value)} placeholder="Add player name..." onKeyDown={e=>{if(e.key==="Enter"&&tNewPlayer.trim()){setTPlayers(p=>[...p,tNewPlayer.trim()]);setTNewPlayer("");}}}
-            style={{flex:1,background:"rgba(255,255,255,0.07)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:10,padding:"8px 12px",color:"#fff",fontSize:"0.85rem",fontFamily:"inherit",outline:"none"}}/>
-          <Btn small onClick={()=>{if(tNewPlayer.trim()){setTPlayers(p=>[...p,tNewPlayer.trim()]);setTNewPlayer("");}}} color="#f97316">Add</Btn>
-        </div>
-      </div>
-      <Btn onClick={createTournament} disabled={tPlayers.length<2} color="linear-gradient(135deg,#f97316,#ea580c)" style={{width:"100%"}}>🏟️ Create & Start!</Btn>
-    </div>
-  );
-
-  if(view==="join")return(
-    <div style={{color:"#fff"}}>
-      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-        <Btn small onClick={()=>setView("hub")}>← Back</Btn>
-        <h3 className="game-title" style={{color:"#0891b2",margin:0,fontSize:"1.2rem"}}>🔑 Join Tournament</h3>
-      </div>
-      <div style={{color:"#555",fontSize:"0.83rem",marginBottom:12}}>Enter the 6-character code from your tournament host.</div>
-      <input value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} placeholder="ABC123" maxLength={6}
-        style={{width:"100%",background:"rgba(255,255,255,0.07)",border:"1.5px solid rgba(255,255,255,0.15)",borderRadius:12,padding:"14px",color:"#fff",fontSize:"1.5rem",fontFamily:"inherit",outline:"none",textAlign:"center",letterSpacing:8,marginBottom:12}}/>
-      {joinErr&&<div style={{color:"#f43f5e",fontWeight:700,fontSize:"0.82rem",marginBottom:10}}>{joinErr}</div>}
-      <Btn onClick={joinTournament} disabled={loading||joinCode.length<4} color="linear-gradient(135deg,#0891b2,#06b6d4)" style={{width:"100%"}}>{loading?"Loading...":"🔍 Find Tournament"}</Btn>
-    </div>
-  );
-
-  if((view==="bracket"||view==="roundrobin")&&tourney){
-    const modeInfo=GAME_MODES_INFO.find(m=>m.id===tourney.mode)||GAME_MODES_INFO[0];
-    const standings=getRRStandings();
-    return(
-      <div style={{color:"#fff"}}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <Btn small onClick={()=>setView("hub")}>← Back</Btn>
-            <div>
-              <h3 className="game-title" style={{color:"#f97316",margin:0,fontSize:"1.1rem"}}>{tourney.name}</h3>
-              <div style={{color:"#555",fontSize:"0.7rem"}}>{modeInfo.icon} {modeInfo.label} · {tourney.type==="bracket"?"Single Elimination":"Round Robin"}</div>
-            </div>
-          </div>
-          <div style={{background:"rgba(255,255,255,0.08)",borderRadius:10,padding:"4px 10px",color:"#888",fontSize:"0.75rem",fontWeight:700,letterSpacing:2}}>{tourney.code}</div>
-        </div>
-
-        {tourney.type==="bracket"&&(
-          <div style={{overflowX:"auto"}}>
-            <div style={{display:"flex",gap:16,minWidth:"max-content"}}>
-              {tourney.rounds.map((round,ri)=>(
-                <div key={ri} style={{display:"flex",flexDirection:"column",gap:8,justifyContent:"space-around",minWidth:140}}>
-                  <div style={{color:"#555",fontSize:"0.68rem",fontWeight:700,textAlign:"center",marginBottom:4,textTransform:"uppercase"}}>Round {ri+1}</div>
-                  {round.map((match,mi)=>(
-                    <div key={mi} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",borderRadius:12,padding:10}}>
-                      {[match.p1,match.p2].map((p,pi)=>(
-                        <div key={pi} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"4px 6px",borderRadius:8,background:match.winner===p?"rgba(249,115,22,0.2)":"transparent",marginBottom:pi===0?4:0}}>
-                          <span style={{fontSize:"0.78rem",fontWeight:700,color:p?match.winner===p?"#fb923c":"#aaa":"#333"}}>{p||"TBD"}</span>
-                          {p&&!match.winner&&(
-                            <div style={{display:"flex",gap:4}}>
-                              <button onClick={()=>setMatchWinner(ri,mi,p)} style={{fontSize:"0.65rem",background:"rgba(74,222,128,0.2)",border:"1px solid rgba(74,222,128,0.4)",borderRadius:6,padding:"2px 7px",color:"#4ade80",cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>WIN</button>
-                              <button onClick={()=>{if(onPlayGame)onPlayGame(tourney.mode,{name1:match.p1||"P1",name2:match.p2||"P2"},{ri,mi,code:tourney.code,tourney,setMatchWinner});}} style={{fontSize:"0.65rem",background:"rgba(99,102,241,0.2)",border:"1px solid rgba(99,102,241,0.4)",borderRadius:6,padding:"2px 7px",color:"#a5b4fc",cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>PLAY</button>
-                            </div>
-                          )}
-                          {match.winner===p&&<span style={{fontSize:"0.7rem"}}>🏆</span>}
+                {state === 'lobby' && gameData && (
+                  <div className="space-y-6 fade-in-delay-2">
+                    <div className="bg-gradient-to-r from-green-100 to-purple-100 p-6 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-sm text-gray-600">Game Code</p>
+                          <p className="text-3xl font-bold text-blue-700">{gameCode}</p>
+                        </div>
+                        <button onClick={copyCode} className="px-4 py-2 bg-white rounded-lg hover:bg-gray-100">
+                          {copied ? <Check className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-bold mb-2">Players ({gameData.players.length})</h3>
+                      {gameData.players.map((p, index) => (
+                        <div key={p.id} className={`bg-gray-100 p-3 rounded mb-2 fade-in-delay-${Math.min(index + 1, 3)}`}>
+                          <p className="font-semibold">{p.name} {p.id === myId && '(You)'}</p>
+                          {p.isHost && <p className="text-sm text-gray-600">👑 Host</p>}
                         </div>
                       ))}
                     </div>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+                    {message && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center gap-2 fade-in"><AlertCircle className="w-5 h-5" />{message}</div>}
+                    {gameData.players[0].id === myId && (
+                      <button onClick={startGame} className="w-full bg-gradient-to-r from-green-500 to-green-700 text-white p-4 rounded-lg font-bold">Start Game</button>
+                    )}
+                    <button onClick={leaveGame} className="w-full bg-gray-300 text-gray-700 p-3 rounded-lg font-bold hover:bg-gray-400">Leave Game</button>
+                  </div>
+                )}
 
-        {tourney.type==="roundrobin"&&(
-          <>
-            <div style={{marginBottom:14}}>
-              <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Standings</div>
-              {standings.map(([p,pts],i)=>(
-                <div key={p} style={{display:"flex",alignItems:"center",gap:10,background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,padding:"8px 12px",marginBottom:6}}>
-                  <span style={{color:i===0?"#fbbf24":i===1?"#9ca3af":i===2?"#b45309":"#555",fontWeight:900,fontSize:"1rem",minWidth:20}}>{i+1}.</span>
-                  <span style={{flex:1,fontWeight:700,fontSize:"0.88rem"}}>{p}</span>
-                  <span style={{color:"#f97316",fontWeight:800,fontSize:"0.85rem"}}>{pts} pts</span>
-                </div>
-              ))}
-            </div>
-            <div style={{color:"#555",fontSize:"0.72rem",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:1}}>Matches</div>
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              {tourney.matches.map((m,mi)=>(
-                <div key={mi} style={{background:"rgba(255,255,255,0.04)",border:`1px solid ${m.played?"rgba(249,115,22,0.3)":"rgba(255,255,255,0.08)"}`,borderRadius:12,padding:"10px 14px",display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{flex:1,fontWeight:700,fontSize:"0.83rem",color:m.winner===m.p1?"#fb923c":"#aaa"}}>{m.p1}</span>
-                  <span style={{color:"#444",fontWeight:900}}>vs</span>
-                  <span style={{flex:1,fontWeight:700,fontSize:"0.83rem",textAlign:"right",color:m.winner===m.p2?"#fb923c":"#aaa"}}>{m.p2}</span>
-                  {!m.played?(
-                    <div style={{display:"flex",gap:4,marginLeft:8}}>
-                      <button onClick={()=>setMatchWinner(-1,mi,m.p1)} style={{fontSize:"0.63rem",background:"rgba(255,77,109,0.2)",border:"1px solid rgba(255,77,109,0.4)",borderRadius:6,padding:"2px 6px",color:"#ff4d6d",cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{m.p1}</button>
-                      <button onClick={()=>setMatchWinner(-1,mi,m.p2)} style={{fontSize:"0.63rem",background:"rgba(76,201,240,0.2)",border:"1px solid rgba(76,201,240,0.4)",borderRadius:6,padding:"2px 6px",color:"#4cc9f0",cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>{m.p2}</button>
-                      <button onClick={()=>{if(onPlayGame)onPlayGame(tourney.mode,{name1:m.p1,name2:m.p2},{mi,code:tourney.code,tourney,setMatchWinner,isRR:true});}} style={{fontSize:"0.63rem",background:"rgba(99,102,241,0.2)",border:"1px solid rgba(99,102,241,0.4)",borderRadius:6,padding:"2px 6px",color:"#a5b4fc",cursor:"pointer",fontFamily:"inherit",fontWeight:700}}>PLAY</button>
+                {gameData && gameData.state === 'playing' && (
+                  <div className="space-y-6 fade-in-delay-2">
+                    <div className="bg-gradient-to-r from-blue-100 to-purple-100 p-4 rounded-lg">
+                      <p className="text-sm">Current Turn</p>
+                      <p className="text-2xl font-bold">
+                        {gameData.players.find(p => p.id === gameData.current)?.username || 'Unknown'}
+                        {isMyTurn && ' (You!)'}
+                      </p>
                     </div>
-                  ):<span style={{marginLeft:8,color:"#4ade80",fontWeight:700,fontSize:"0.75rem"}}>🏆 {m.winner}</span>}
-                </div>
-              ))}
+                    
+                    <div>
+                      <h3 className="font-bold mb-2">Active Players ({active.length})</h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        {active.map((p, index) => (
+                          <div key={p.id} className={
+                            p.id === gameData.current 
+                              ? `p-3 rounded bg-purple-100 border-2 border-purple-500 fade-in-delay-${Math.min(index % 3 + 1, 3)}`
+                              : `p-3 rounded bg-gray-100 fade-in-delay-${Math.min(index % 3 + 1, 3)}`
+                          }>
+                            <p className="font-semibold">{p.username}</p>
+                            <p className="text-xs text-gray-600">Score: {p.score}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {!amIActive && (
+                      <div className="bg-yellow-100 border border-yellow-400 text-yellow-800 px-4 py-3 rounded fade-in">
+                        <p className="font-semibold">You've been eliminated!</p>
+                        <p className="text-sm">Watch the remaining players battle it out.</p>
+                      </div>
+                    )}
+
+                    {isMyTurn && amIActive && (
+                      <div className="space-y-3 bg-green-50 p-4 rounded-lg border-2 border-green-500 fade-in">
+                        <p className="font-bold text-green-700">Your turn! Make a guess:</p>
+                        <select value={selected} onChange={(e) => setSelected(e.target.value)} className="w-full p-3 border-2 rounded-lg">
+                          <option value="">Select a player...</option>
+                          {active.filter(p => p.id !== myId).map(p => (
+                            <option key={p.id} value={p.id}>{p.username}</option>
+                          ))}
+                        </select>
+                        <input 
+                          placeholder="Guess their real name" 
+                          value={guess} 
+                          onChange={(e) => setGuess(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && makeGuess()}
+                          className="w-full p-3 border-2 rounded-lg" 
+                        />
+                        <button onClick={makeGuess} className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white p-3 rounded-lg font-bold">Submit Guess</button>
+                        {message && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded flex items-center gap-2 fade-in"><AlertCircle className="w-5 h-5" />{message}</div>}
+                      </div>
+                    )}
+
+                    <button onClick={leaveGame} className="w-full bg-gray-300 text-gray-700 p-3 rounded-lg font-bold hover:bg-gray-400">Leave Game</button>
+                  </div>
+                )}
+
+                {gameData && gameData.state === 'finished' && gameData.winner && (
+                  <div className="text-center space-y-6 fade-in-delay-2">
+                    <div className="bg-gradient-to-r from-yellow-100 to-orange-100 p-8 rounded-lg">
+                      <Crown className="w-20 h-20 mx-auto text-yellow-500 mb-4" />
+                      <h2 className="text-3xl font-bold">Winner!</h2>
+                      <p className="text-2xl text-purple-700">{gameData.winner.username}</p>
+                      <p className="text-gray-600">({gameData.winner.name})</p>
+                    </div>
+                    <div>
+                      <h3 className="font-bold mb-3">Final Scores</h3>
+                      {gameData.players
+                        .sort((a, b) => b.score - a.score)
+                        .map((p, index) => (
+                        <div key={p.id} className={`p-3 rounded mb-2 fade-in-delay-${Math.min(index % 3 + 1, 3)} ${index === 0 ? 'bg-yellow-100 border-2 border-yellow-400' : 'bg-gray-100'}`}>
+                          <p className="font-semibold">
+                            {index + 1}. {p.username} = {p.name}
+                            {p.id === myId && ' (You)'}
+                          </p>
+                          <p className="text-sm">Score: {p.score} correct guess{p.score !== 1 ? 'es' : ''}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <button onClick={leaveGame} className="bg-gradient-to-r from-purple-500 to-purple-700 text-white px-8 py-3 rounded-lg font-bold">Back to Home</button>
+                  </div>
+                )}
+              </div>
             </div>
-          </>
-        )}
-      </div>
-    );
-  }
+          );
+        }
 
-  return null;
-}
-
-/* ══════════════════════════════════════════════════════════
-   XTRA FUN HUB
-══════════════════════════════════════════════════════════ */
-function XtraFunHub({user,xtraData,onUpdateXtra,onBack,onPlayGame}){
-  const[tab,setTab]=useState("records");
-  return(
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a0a0f,#080814,#0a0a12)",padding:16}}>
-      <div style={{maxWidth:600,margin:"0 auto"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
-          <Btn small onClick={onBack}>← Menu</Btn>
-          <div>
-            <h1 className="game-title" style={{margin:0,fontSize:"1.6rem",background:"linear-gradient(135deg,#fbbf24,#f97316,#ec4899)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>⭐ Xtra Fun</h1>
-            <div style={{color:"#444",fontSize:"0.75rem"}}>🪙 {(xtraData?.coins||0).toLocaleString()} coins · {user}</div>
-          </div>
-        </div>
-
-        <div style={{display:"flex",gap:6,marginBottom:20,background:"rgba(255,255,255,0.04)",borderRadius:16,padding:5}}>
-          {[{id:"records",icon:"📊",label:"Records"},{id:"markers",icon:"✨",label:"Markers"},{id:"tournament",icon:"🏟️",label:"Tournament"}].map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)} style={{flex:1,background:tab===t.id?"rgba(255,255,255,0.1)":"transparent",border:"none",borderRadius:12,padding:"8px 4px",cursor:"pointer",fontFamily:"inherit",color:tab===t.id?"#fff":"#555",fontWeight:700,fontSize:"0.8rem",transition:"all 0.2s"}}>
-              <div style={{fontSize:"1.2rem",marginBottom:2}}>{t.icon}</div>
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {tab==="records"&&<RecordsScreen xtraData={xtraData} username={user}/>}
-        {tab==="markers"&&<MarkersScreen xtraData={xtraData} onUpdateXtra={onUpdateXtra} username={user}/>}
-        {tab==="tournament"&&<TournamentScreen xtraData={xtraData} onUpdateXtra={onUpdateXtra} username={user} onPlayGame={onPlayGame}/>}
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   LOGIN SCREEN
-══════════════════════════════════════════════════════════ */
-function LoginScreen({onLogin}){
-  const[name,setName]=useState("");
-  const[pass,setPass]=useState("");
-  const[mode,setMode]=useState("login");
-  const[err,setErr]=useState("");
-  const[loading,setLoading]=useState(false);
-
-  const submit=async()=>{
-    if(!name.trim()||!pass.trim()){setErr("Please fill in both fields!");return;}
-    setLoading(true);setErr("");
-    const key=STOR_PREFIX+name.toLowerCase().replace(/\s+/g,"_");
-    try{
-      if(mode==="register"){
-        let taken=false;try{const ex=await window.storage.get(key);if(ex)taken=true;}catch{}
-        if(taken){setErr("Username taken!");setLoading(false);return;}
-        await window.storage.set(key,JSON.stringify({name,pass}));onLogin(name);
-      }else{
-        try{const res=await window.storage.get(key);const data=JSON.parse(res.value);if(data.pass!==pass){setErr("Wrong password!");setLoading(false);return;}onLogin(name);}
-        catch{setErr("Account not found!");}
-      }
-    }catch{setErr("Something went wrong.");}
-    setLoading(false);
-  };
-
-  return(
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a0a0f,#0d0d1a,#0a0f1a)",display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-      <div style={{position:"fixed",top:"8%",left:"5%",width:300,height:300,borderRadius:"50%",background:"radial-gradient(circle,rgba(139,92,246,0.12),transparent)",filter:"blur(55px)",pointerEvents:"none"}}/>
-      <div style={{position:"fixed",bottom:"10%",right:"5%",width:260,height:260,borderRadius:"50%",background:"radial-gradient(circle,rgba(251,191,36,0.08),transparent)",filter:"blur(55px)",pointerEvents:"none"}}/>
-      <div className="slide-in" style={{background:"rgba(255,255,255,0.05)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:28,padding:"38px 30px",width:340,color:"#fff",position:"relative",zIndex:1,boxShadow:"0 24px 80px rgba(0,0,0,0.5)"}}>
-        <div style={{textAlign:"center",marginBottom:28}}>
-          <div style={{fontSize:"3.5rem",marginBottom:6}}>🎮</div>
-          <h1 className="game-title" style={{margin:0,fontSize:"2rem",background:"linear-gradient(135deg,#a855f7,#4f46e5,#06b6d4)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>Tic Tac Fun</h1>
-          <p style={{color:"#333",fontSize:"0.75rem",margin:"4px 0 0"}}>Play • Collect • Compete</p>
-        </div>
-        <div style={{display:"flex",background:"rgba(255,255,255,0.06)",borderRadius:14,padding:4,marginBottom:16}}>
-          {["login","register"].map(m=>(
-            <button key={m} onClick={()=>{setMode(m);setErr("");}} style={{flex:1,padding:8,borderRadius:10,border:"none",cursor:"pointer",background:mode===m?"rgba(139,92,246,0.5)":"transparent",color:mode===m?"#fff":"#555",fontWeight:700,fontSize:"0.83rem",fontFamily:"inherit"}}>
-              {m==="login"?"Sign In":"Register"}
-            </button>
-          ))}
-        </div>
-        {["Username","Password"].map((label,fi)=>(
-          <input key={label} type={fi===1?"password":"text"} value={fi===0?name:pass} onChange={e=>fi===0?setName(e.target.value):setPass(e.target.value)} onKeyDown={e=>e.key==="Enter"&&submit()} placeholder={label}
-            style={{width:"100%",background:"rgba(255,255,255,0.07)",border:"1.5px solid rgba(255,255,255,0.1)",borderRadius:14,padding:"12px 16px",color:"#fff",fontSize:"0.95rem",fontFamily:"inherit",outline:"none",marginBottom:12}}
-            onFocus={e=>e.target.style.borderColor="rgba(139,92,246,0.6)"} onBlur={e=>e.target.style.borderColor="rgba(255,255,255,0.1)"}/>
-        ))}
-        {err&&<div style={{background:"rgba(239,68,68,0.15)",border:"1px solid rgba(239,68,68,0.3)",borderRadius:10,padding:"8px 14px",color:"#fca5a5",fontSize:"0.8rem",marginBottom:12,textAlign:"center"}}>⚠️ {err}</div>}
-        <Btn onClick={submit} disabled={loading} color="linear-gradient(135deg,#7c3aed,#4f46e5)" style={{width:"100%",opacity:loading?0.7:1}}>
-          {loading?"⏳ Loading...":mode==="login"?"🚀 Sign In":"✨ Create Account"}
-        </Btn>
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   MENU SCREEN
-══════════════════════════════════════════════════════════ */
-const GAME_MODES=[
-  {id:"classic",icon:"⬜",name:"Classic",      sub:"3×3 · Get 3 in a row",          grad:"linear-gradient(135deg,#22c55e,#16a34a)",glow:"rgba(34,197,94,0.3)"},
-  {id:"archery",icon:"🏹",name:"Tic Tac Archery",sub:"Shoot arrows — miss, hit, ricochet!",grad:"linear-gradient(135deg,#f97316,#dc2626)",glow:"rgba(249,115,22,0.3)"},
-  {id:"3d",     icon:"🎲",name:"3D Tic Tac Toe",sub:"3 layers · 49 winning lines",  grad:"linear-gradient(135deg,#06b6d4,#4f46e5)",glow:"rgba(6,182,212,0.3)"},
-  {id:"five",   icon:"5️⃣",name:"5 in a Row",   sub:"5×5 board · Get 5 in a row",   grad:"linear-gradient(135deg,#eab308,#f97316)",glow:"rgba(234,179,8,0.3)"},
-  {id:"ten",    icon:"🔟",name:"10 in a Row",  sub:"10×10 board · Get 10 in a row!",grad:"linear-gradient(135deg,#ec4899,#8b5cf6)",glow:"rgba(236,72,153,0.3)"},
-  {id:"custom", icon:"✏️",name:"Custom Shape", sub:"Draw your own board shape!",    grad:"linear-gradient(135deg,#14b8a6,#059669)",glow:"rgba(20,184,166,0.3)"},
-];
-
-function MenuScreen({user,xtraData,onSelect,onXtraFun,onLogout}){
-  const coins=xtraData?.coins||0;
-  return(
-    <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a0a0f,#0d0d1a,#0a0f1a)",padding:20}}>
-      <div style={{maxWidth:520,margin:"0 auto"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:20}}>
-          <div>
-            <h1 className="game-title" style={{margin:0,fontSize:"1.9rem",background:"linear-gradient(135deg,#a855f7,#4f46e5,#06b6d4)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>🎮 Tic Tac Fun</h1>
-            <div style={{color:"#404040",fontSize:"0.8rem",marginTop:2}}>Welcome back, <span style={{color:"#a855f7",fontWeight:700}}>{user}</span>! 👋</div>
-          </div>
-          <Btn small onClick={onLogout} style={{color:"#444"}}>Sign Out</Btn>
-        </div>
-
-        {/* Xtra Fun Banner */}
-        <button onClick={onXtraFun} style={{width:"100%",background:"linear-gradient(135deg,rgba(251,191,36,0.12),rgba(249,115,22,0.08),rgba(236,72,153,0.12))",border:"1.5px solid rgba(251,191,36,0.25)",borderRadius:18,padding:"14px 18px",cursor:"pointer",fontFamily:"inherit",marginBottom:18,textAlign:"left",transition:"all 0.2s",display:"flex",alignItems:"center",gap:14}}
-          onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"} onMouseLeave={e=>e.currentTarget.style.transform="none"}>
-          <div style={{fontSize:"2.5rem"}}>⭐</div>
-          <div style={{flex:1}}>
-            <div className="game-title" style={{color:"#fbbf24",fontSize:"1.1rem",marginBottom:2}}>Xtra Fun Zone</div>
-            <div style={{color:"#666",fontSize:"0.72rem"}}>Records · Markers · Tournaments · Gift markers · And more!</div>
-          </div>
-          <div style={{background:"rgba(251,191,36,0.15)",border:"1px solid rgba(251,191,36,0.3)",borderRadius:10,padding:"4px 10px",color:"#fbbf24",fontWeight:800,fontSize:"0.8rem"}}>🪙{coins}</div>
-        </button>
-
-        <div style={{color:"#2a2a2a",fontSize:"0.72rem",textAlign:"center",marginBottom:12,letterSpacing:2,textTransform:"uppercase",fontWeight:700}}>Choose Your Game</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          {GAME_MODES.map(m=>(
-            <button key={m.id} onClick={()=>onSelect(m.id)} style={{background:"rgba(255,255,255,0.04)",border:"1.5px solid rgba(255,255,255,0.07)",borderRadius:20,padding:18,textAlign:"left",cursor:"pointer",transition:"all 0.2s",position:"relative",overflow:"hidden",fontFamily:"inherit"}}
-              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px)";e.currentTarget.style.boxShadow=`0 12px 40px ${m.glow}`;e.currentTarget.style.borderColor="rgba(255,255,255,0.17)";}}
-              onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="none";e.currentTarget.style.borderColor="rgba(255,255,255,0.07)";}}>
-              <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:m.grad,borderRadius:"20px 20px 0 0"}}/>
-              <div style={{fontSize:"1.9rem",marginBottom:6}}>{m.icon}</div>
-              <div className="game-title" style={{color:"#fff",fontSize:"0.95rem",marginBottom:2}}>{m.name}</div>
-              <div style={{color:"#484848",fontSize:"0.66rem",lineHeight:1.4}}>{m.sub}</div>
-            </button>
-          ))}
-        </div>
-        <div style={{textAlign:"center",marginTop:16,color:"#1a1a1a",fontSize:"0.65rem"}}>Player 1 is ✕ (Red) · Player 2/Bot is ○ (Blue)</div>
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   GAME META & ROOT APP
-══════════════════════════════════════════════════════════ */
-const GAME_META={
-  classic:{title:"Classic Tic Tac Toe",icon:"⬜",component:"classic"},
-  archery:{title:"Tic Tac Archery",    icon:"🏹",component:"archery"},
-  "3d":   {title:"3D Tic Tac Toe",     icon:"🎲",component:"3d"},
-  five:   {title:"5 in a Row",          icon:"5️⃣",component:"nxn",size:5,winLen:5},
-  ten:    {title:"10 in a Row",         icon:"🔟",component:"nxn",size:10,winLen:10},
-  custom: {title:"Custom Shape",        icon:"✏️",component:"custom"},
-};
-
-function TicTacFun(){
-  const[screen,setScreen]=useState("login");
-  const[user,setUser]=useState(null);
-  const[xtraData,setXtraData]=useState(null);
-  const[selectedGame,setSelectedGame]=useState(null);
-  const[gameSettings,setGameSettings]=useState(null);
-  const[isXtraFunGame,setIsXtraFunGame]=useState(false);
-  const[preMatchData,setPreMatchData]=useState(null); // {name1,name2,marker1,marker2}
-  const[tournamentCallback,setTournamentCallback]=useState(null);
-
-  // Load xtra data on login
-  const handleLogin=async(name)=>{
-    setUser(name);
-    const data=await loadXtraData(name);
-    // Daily login bonus
-    const today=new Date().toDateString();
-    if(data.lastLogin!==today){
-      data.coins=(data.coins||0)+25;
-      data.lastLogin=today;
-      await saveXtraData(name,data);
-    }
-    setXtraData(data);
-    setScreen("menu");
-  };
-
-  const updateXtraData=async(newData)=>{setXtraData(newData);};
-
-  const handleGameEnd=async({winner,draw,moves,mode,vsBot,difficulty})=>{
-    if(!user||!xtraData)return;
-    const r={...(xtraData.records||{})};
-    r.totalGames=(r.totalGames||0)+1;
-    if(winner===1||(!vsBot&&winner===2)){
-      r.totalWins=(r.totalWins||0)+1;
-      if(vsBot){r.botWins=(r.botWins||0)+1;if(difficulty==="xhard")r.xhardWins=(r.xhardWins||0)+1;}
-      if(mode==="archery")r.archeryWins=(r.archeryWins||0)+1;
-      if(mode==="3d")r.threeDWins=(r.threeDWins||0)+1;
-      if(mode==="ten")r.tenWins=(r.tenWins||0)+1;
-      if(mode==="custom")r.customWins=(r.customWins||0)+1;
-      r.currentStreak=(r.currentStreak||0)+1;
-      r.bestStreak=Math.max(r.bestStreak||0,r.currentStreak);
-      if(moves&&(!r.fastestMoves||moves<r.fastestMoves))r.fastestMoves=moves;
-    }else{r.currentStreak=0;}
-    let coinsEarned=0;
-    if(winner===1||(!vsBot&&winner)){coinsEarned=vsBot?COIN_REWARDS[difficulty]||10:5;}
-    else if(draw)coinsEarned=COIN_REWARDS.draw;
-    const newData={...xtraData,coins:(xtraData.coins||0)+coinsEarned,records:r};
-    const newAch=checkNewAchievements(r,r.achievements||[]);
-    if(newAch.length){newData.coins+=newAch.reduce((s,a)=>s+a.coins,0);newData.records.achievements=[...(r.achievements||[]),...newAch.map(a=>a.id)];}
-    await saveXtraData(user,newData);setXtraData(newData);
-  };
-
-  // Handle tournament game request
-  const handleTournamentGame=(mode,{name1,name2},callback)=>{
-    setSelectedGame(mode);
-    setGameSettings({vsBot:false});
-    setPreMatchData({name1,name2,marker1:"✕",marker2:"○"});
-    setTournamentCallback(()=>callback);
-    setIsXtraFunGame(true);
-    setScreen("game");
-  };
-
-  const goBack=()=>{setSelectedGame(null);setGameSettings(null);setPreMatchData(null);setIsXtraFunGame(false);setTournamentCallback(null);setScreen("menu");};
-  const goToSetup=()=>{setGameSettings(null);setPreMatchData(null);setScreen("setup");};
-
-  const makeGameEnd=(mode)=>({winner,draw,moves})=>{
-    handleGameEnd({winner,draw,moves,mode,vsBot:gameSettings?.vsBot,difficulty:gameSettings?.difficulty});
-    if(tournamentCallback){
-      // Determine which player won in terms of tournament player names
-      const winnerName=winner===1?preMatchData?.name1:preMatchData?.name2;
-      if(winnerName&&tournamentCallback.setMatchWinner){
-        const cb=tournamentCallback;
-        if(cb.isRR)cb.setMatchWinner(-1,cb.mi,winnerName);
-        else cb.setMatchWinner(cb.ri,cb.mi,winnerName);
-      }
-    }
-  };
-
-  if(screen==="login")return<><GlobalStyles/><LoginScreen onLogin={handleLogin}/></>;
-  if(screen==="menu")return<><GlobalStyles/><MenuScreen user={user} xtraData={xtraData} onSelect={g=>{setSelectedGame(g);setIsXtraFunGame(false);setScreen("setup");}} onXtraFun={()=>setScreen("xtra")} onLogout={()=>{setUser(null);setXtraData(null);setScreen("login");}}/></>;
-  if(screen==="xtra")return<><GlobalStyles/><XtraFunHub user={user} xtraData={xtraData} onUpdateXtra={updateXtraData} onBack={()=>setScreen("menu")} onPlayGame={handleTournamentGame}/></>;
-
-  if(screen==="setup"&&selectedGame){
-    const meta=GAME_META[selectedGame];
-    return<><GlobalStyles/><SetupScreen gameTitle={meta.title} gameIcon={meta.icon} xtraData={xtraData} username={user} onBack={()=>setScreen("menu")} onStart={s=>{setGameSettings(s);if(isXtraFunGame)setScreen("prematch");else setScreen("game");}}/></>;
-  }
-
-  if(screen==="prematch"&&selectedGame&&gameSettings){
-    const meta=GAME_META[selectedGame];
-    const owned1=xtraData?.markers||[1,2];
-    return<><GlobalStyles/><PreMatchScreen gameTitle={meta.title} gameIcon={meta.icon} onBack={goToSetup} onStart={pmd=>{setPreMatchData(pmd);setScreen("game");}} vsBot={gameSettings.vsBot} difficulty={gameSettings.difficulty} xtraData1={xtraData} xtraData2={xtraData} username1={user} username2="Player 2"/></>;
-  }
-
-  if(screen==="game"&&selectedGame&&gameSettings){
-    const{vsBot,difficulty,markerEmoji1,markerEmoji2}=gameSettings;
-    const meta=GAME_META[selectedGame];
-    const names=preMatchData?[preMatchData.name1,preMatchData.name2]:null;
-    // Use preMatchData markers (Xtra Fun) OR the markers chosen in SetupScreen
-    const markerSyms=preMatchData
-      ?[preMatchData.marker1,preMatchData.marker2]
-      :markerEmoji1?[markerEmoji1,markerEmoji2||"○"]:null;
-    const back=()=>{if(isXtraFunGame)setScreen("xtra");else goBack();};
-    const gameEnd=makeGameEnd(selectedGame);
-    const props={onBack:back,vsBot,difficulty,onGameEnd:gameEnd,names,markerSyms};
-    if(meta.component==="classic")return<><GlobalStyles/><NxNGame {...props} size={3} winLen={3} title={meta.title} icon={meta.icon}/></>;
-    if(meta.component==="archery")return<><GlobalStyles/><ArcheryGame {...props}/></>;
-    if(meta.component==="3d")return<><GlobalStyles/><Game3D {...props}/></>;
-    if(meta.component==="nxn")return<><GlobalStyles/><NxNGame {...props} size={meta.size} winLen={meta.winLen} title={meta.title} icon={meta.icon}/></>;
-    if(meta.component==="custom")return<><GlobalStyles/><CustomGame {...props}/></>;
-  }
-
-  return<><GlobalStyles/><LoginScreen onLogin={handleLogin}/></>;
-}
-
-
-  // Mount
-  const container = document.getElementById('root');
-  const root = ReactDOM.createRoot(container);
-  root.render(React.createElement(TicTacFun));
-  document.getElementById('loading').style.display = 'none';
-  </script>
+        ReactDOM.render(<UsernameMatchGame />, document.getElementById('root'));
+    </script>
 </body>
 </html>
